@@ -13,7 +13,11 @@ es que sí pueda.
 - Funciones de FPG y mapas integradas (el IDE tiene visor de FPG).
 - Acceso a directorios y ficheros (`XDir`), UTF-8 y rutas portables.
 
+## Estado
+
+Importado en `ide/FenXEdit2/` (ver `ide/README.md`). **Compila** con `tools/ide-compile.sh` sin cambios en el IDE y **arranca** con `fxi` de 32 bits (uso sin probar).
+
 ## Pendiente
 - Leer el código fuente completo y listar las funciones que usa.
-- Comprobar la licencia del código del IDE antes de incluirlo.
+- Revisar las cabeceras de autoría (el código principal es del propio proyecto; hay piezas de otros autores en los auxiliares no importados).
 - Decidir cómo se versiona la sintaxis para que un programa escrito en el dialecto de Fenix siga compilando.

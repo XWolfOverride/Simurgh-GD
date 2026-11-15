@@ -8,6 +8,8 @@
 #
 # Variables:
 #   ZIG       ruta de zig (por defecto el de C:/XWolf/Apps/Zig o el del PATH)
+#   FXC_SRC   arbol de fuentes a compilar, relativo a la raiz (por defecto src; p. ej. upstream/fenix-0.92a-fixed)
+#   FXC_OUT   nombre del ejecutable generado (por defecto fxc)
 #   ZLIB_DIR  fuentes de zlib (por defecto build/zig-probe/zlib; se descarga la 1.3.1 si no existe)
 #
 # Deja todo en build/zig-probe/ (ignorado por git). Es una herramienta temporal hasta que exista el sistema de
@@ -56,17 +58,18 @@ for f in adler32 crc32 deflate inffast inflate inftrees trees zutil compress unc
 done
 
 # Notas: -fcommon (Fenix repite definiciones de globales), dcbw_old.c es codigo muerto, VERSION lo daba configure.
-cd "$root/src"
+srcdir=${FXC_SRC:-src}		# arbol a compilar (relativo a la raiz del proyecto)
+cd "$root/$srcdir"
 fxc_src=$(ls fxc/src/*.c | grep -v dcbw_old)
 extra=""
-exe=fxc
+exe=${FXC_OUT:-fxc}
 case $target in
-    *windows*) extra="-DTARGET_Win32 -DWIN32 -D_WIN32 -lshlwapi"; exe=fxc.exe ;;
+    *windows*) extra="-DTARGET_Win32 -DWIN32 -D_WIN32 -lshlwapi"; exe=${FXC_OUT:-fxc}.exe ;;
     *linux*)   extra="-DTARGET_Linux -D_GNU_SOURCE -DHAVE_UNISTD_H" ;;
     *macos*)   extra="-DTARGET_MAC" ;;
 esac
 echo ">> Compilando fxc para $target..."
-"$zig" cc -target "$target" -O2 -w -fcommon -DVERSION='"0.92a"' $extra \
+"$zig" cc -target "$target" -O2 -w ${FXC_CFLAGS:--fno-common} -DFILES_STATE=__thread -DVERSION='"0.92a"' $extra \
     -I"$out/sdlstub" -I"$zl" -Iinclude -Ifxc/inc \
     $fxc_src common/files.c common/xctype.c $zsrc -o "$out/$exe"
 echo ">> Hecho: $out/$exe"
@@ -76,7 +79,7 @@ case $target in
     x86_64-windows*|*-native*|x86_64-linux*|aarch64-macos*) ;;
     *) echo ">> (destino no ejecutable aqui: sin prueba de reproducibilidad)"; exit 0 ;;
 esac
-cp "$root/src/bin/test.prg" "$out/test.prg"
+cp "$root/$srcdir/bin/test.prg" "$out/test.prg"
 cd "$out"
 # fxc devuelve 1 incluso al compilar bien (comportamiento heredado): se mira el fichero generado, no el codigo de salida.
 rm -f test.dcb

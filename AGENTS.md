@@ -36,7 +36,9 @@ Este fichero es un índice de decisiones y estado; el detalle está en `DOC/` (�
 - **Compilador reentrante** y utilizable como biblioteca (`libsimurgh`): se puede compilar desde un programa Simurgh. El
   intérprete **no** es reentrante: ejecutar un programa compilado es lanzar otro proceso `simurgh`. El depurador
   se evaluará más adelante.
-- **IDE:** se rescatará FenXEdit2 (IDE escrito en Fenix, unas 3 200 líneas), ver `DOC/IDE-FENXEDIT2.md`.
+- **IDE:** FenXEdit2 (IDE escrito en Fenix, unas 3 200 líneas) forma parte del proyecto (importado en `ide/FenXEdit2/`; compila con `tools/ide-compile.sh` y arranca con `fxi` de 32 bits; uso sin probar), ver `DOC/IDE-FENXEDIT2.md`.
+- **Migración:** todo cambio del lenguaje o de su biblioteca respecto a Fenix se apunta en `DOC/MIGRACION-FENIX.md` en el momento de decidirlo.
+- **Alias del compilador y `LOAD_IMAGE`:** los nombres antiguos se compilan como su destino (`LOAD_MAP`, `LOAD_PNG`, `LOAD_PCX` → `LOAD_IMAGE`, que detecta el formato por cabecera); `SAVE_MAP` y `SAVE_FPG` existen. FBM y FPL se retiran; MAP/FPG de 24 y 32 bits se leen (se convierten a 16). Ver `DOC/FORMATOS-IMAGEN.md`.
 - **Compatibilidad:** nada es sagrado, pero sin alejarse de la filosofía de Fenix para poder reciclar programadores.
   El lenguaje tiene versión explícita.
 - **Objetivos:** Windows (32/64), Linux (32/64), Linux ARM (Raspberry Pi 1 a 5), macOS (Intel y Apple Silicon), OLPC XO-1, DOS con **586
@@ -50,6 +52,9 @@ Este fichero es un índice de decisiones y estado; el detalle está en `DOC/` (�
 - Fase 0: andamio y documentación (hecho). `src/` difiere de `upstream/` en ocho ficheros (memoria a cero en `fxc/src` para que el `.dcb` sea
   reproducible; `fxi/src/img_png.c` adaptado a libpng 1.5+; `fxi/src/g_fpg.c` con el error de memoria de `gr_read_lib` corregido;
   `bin/test.fpg` con el CRC reparado); `tools/upstream-diff.sh --names` los lista.
+- **`fxc` limpio (2026-11-15):** sin SDL, memoria por `xalloc.h`, errores de memoria corregidos, valgrind limpio; `tools/fxc-compare.sh` lo compara con
+  `upstream/fenix-0.92a-fixed` (5 de 5 idénticos). Reentrante (`fxc_main`; `tools/fxc-reentrant.sh`). Pendiente: formato nuevo de `.dcb` (va con `fxi`). Regla: el lenguaje no se toca (mucho); el
+  binario de compilación sí puede cambiar.
 - **Intérprete: de momento solo 32 bits.** La VM guarda punteros en enteros de 32 bits; compilado para 64 bits se cae al cargar un
   `.dcb` (`DOC/PROBLEMAS.md`, puntos 31-32). El compilador sí funciona en 64 bits. Verificado: `fxi` de 32 bits compilado con Zig para
   Windows arranca y muestra el menú de pruebas (`tools/zig-probe-fxi.sh`). Pendiente de decisión: modelo de punteros de 64 bits.

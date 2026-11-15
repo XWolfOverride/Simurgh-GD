@@ -93,3 +93,39 @@ Lista de riesgos del código heredado y del plan. Al resolver uno, anotar cómo 
     en Linux). No se corrige: es de la demo, y `upstream/fenix-0.92a-fixed` no toca programas de ejemplo salvo para que no se caigan.
 39. **Estructura de las fuentes** (decisión del 2026-11-15): `upstream/fenix-0.92a` (Fenix original) → `upstream/fenix-0.92a-fixed` (Fenix corregido, versión
     de referencia buena, con su diff y `CAMBIOS.md` en `upstream/`) → `src/` (Simurgh). El 2026-11-15 se movió `upstream-fixed/` dentro de `upstream/`.
+
+## Limpieza de `fxc` (2026-11-15)
+Norma del autor: el **lenguaje** no se toca (mucho), para respetar la filosofía de Fenix; el **binario de compilación** (formato del
+`.dcb`, estructuras internas, código del compilador) es otra cosa y no hay que respetarlo. Esta pasada no cambia el `.dcb`.
+
+40. **`fxc` ya no depende de SDL.** `include/simtypes.h` da los tipos (`Uint8`…) y `SIM_BIG_ENDIAN`; se quitó el `SDL_Init` del arranque. El
+    compilador compila y enlaza sin ninguna cabecera ni biblioteca de SDL (los ficheros compartidos, `files.c` y `dcb.h`, también).
+41. **`-fcommon` ya no hace falta:** solo había una variable definida dos veces (`debug`); ahora es `extern` en `fxc.h`. Se borró
+    `dcbw_old.c` (código muerto, ni estaba en el `Makefile`).
+42. **Un solo sitio para pedir memoria: `fxc/inc/xalloc.h`** (`xmalloc`, `xcalloc`, `xrealloc`, `xrealloc0`, `xstrdup`). Reglas: lo que va al
+    `.dcb` o se lee sin rellenar sale a cero (`xcalloc`); al crecer con `xrealloc0` solo se pone a cero la parte nueva (antes había
+    `malloc`+`memset` repartidos y a veces duplicados); lo que se rellena entero antes de usarse (`string_offset`, `constants`…) no se
+    pone a cero. La falta de memoria ya no se comprueba en cada sitio (había ocho mensajes distintos).
+43. **Errores reales encontrados y corregidos** (varios no afectaban al resultado, otros eran desbordes):
+    - `token.c`: `realloc(text, part)` pedía el tamaño de la pieza y no el total: **desborde de memoria** al expandir macros con parámetros largos.
+    - `error.c`: reserva sin hueco para el `\0` (desborde de 1 byte), `msg` sin inicializar si una línea del catálogo no tenía texto, y fuga.
+    - `segment.c`: al crecer, el vector de segmentos se **reservaba nuevo con `malloc` y perdía** el contenido anterior (debía ser `realloc`).
+    - `procedure.c`: las posiciones nuevas del vector `procs` quedaban sin inicializar y `procdef_get` podía devolverlas.
+    - `sysstub.c`: la tabla de 32 entradas guardaba además un `NULL` final: desborde de una posición.
+    - `strings.c` (`string_load`): máscara `& 1023` en lugar de `& ~1023` al calcular el tamaño.
+    - `c_data.c`: `type` y `typeb` se leían sin inicializar en la primera vuelta de `compile_varspace`.
+    - `c_code.c`, `c_data.c`, `c_main.c`, `token.c`: todas las variables `expresion_result` locales se leían sin rellenar del todo (valgrind: 18 avisos).
+    - `main.c`: fuga del buffer del fichero fuente.
+44. **Comprobación:** `valgrind --track-origins=yes --leak-check=full` sobre cinco programas (correctos y con error): **0 errores y 0 bytes
+    perdidos**. El `.dcb` de `test.prg` sigue siendo el mismo (MD5 `ada2a96cc95775249e47eb7103568ef9`).
+45. **Pruebas de referencia (primer paso):** `tests/fxc/` (5 programas: uno con estructuras, macros, `SWITCH`, procesos…, tres con errores de
+    compilación y el menú de pruebas) y `tools/fxc-compare.sh`, que compila `src/` y `upstream/fenix-0.92a-fixed` con Zig y compara la salida del
+    compilador, el código de salida y el `.dcb`. Resultado: **5 de 5 idénticos**.
+46. **Reentrancia (2026-11-15):** `fxc` es ya una biblioteca: `fxc_main(argc, argv)` (en `main.c`; la orden `fxc` es solo `cli.c`) compila y devuelve el código de salida.
+    - **Errores sin `exit()`:** todo error fatal pasa por `fxc_fatal(código)`, que salta (`longjmp`) al retorno de `fxc_main`. Fuera de `fxc_main` termina el proceso.
+    - **Memoria:** `xalloc` apunta cada bloque en una lista; al terminar (bien o con error) `fxc_cleanup()` lo libera todo y reinicia el estado de cada módulo, así que se puede llamar muchas veces seguidas sin fugas, también tras un error. `free` pasa a ser `xfree`.
+    - **Hilos:** todo el estado global de `fxc` (y el de `common/files.c` y `common/xctype.c`, activado con `-DFILES_STATE=__thread`) es propio de cada hilo (`FXC_TLS`), y la tabla de funciones del sistema se copia por hilo. Se pueden compilar varios programas a la vez. `-DFXC_NO_TLS` lo desactiva en destinos sin TLS (p. ej. DOS).
+    - **Pruebas:** `tests/fxc/reentrant.c` + `tools/fxc-reentrant.sh`: 100 compilaciones seguidas con errores entre medias y 8 hilos × 100 vueltas, con el `.dcb` idéntico al de referencia. Compila también para Linux 32 bits y ARM64.
+    - `messages.c` pasa a `messages.h` (solo eran macros). Se borra el código de memoria agotada que ya no podía ejecutarse.
+47. **Formato del `.dcb`:** ya era de ancho fijo, empaquetado (`#pragma pack(1)`) y little-endian (reordenado en big-endian); el mismo `.dcb` sale en Windows 64, Linux 32 y XO. Se fijan los tamaños con `_Static_assert` en `dcb.h` para que no se rompa por accidente. Un formato nuevo (con número de versión propio) se hará junto con el trabajo en `fxi`, que es quien lo lee; no se cambia solo en el compilador.
+48. **Pendiente menor en `fxc`:** avisos de `-Wall` (`-Wunused-but-set-variable`, `-Wpointer-sign`, codificación Latin-1 en cadenas); no se ha repetido valgrind tras la reentrancia.

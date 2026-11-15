@@ -53,3 +53,6 @@ Todo lo que el compilador recuerda entre llamadas (identificadores, constantes, 
 estructura `SimurghCompiler` que se crea, se usa y se destruye. Ante un error no se llama a `exit()`: se registra y se
 devuelve un código, con el texto del error. Así se puede compilar varias veces en el mismo proceso, o desde el IDE,
 sin que una compilación contamine a la siguiente ni cierre el programa.
+
+## Estado del compilador (2026-11-15)
+`fxc` ya no usa SDL (`include/simtypes.h`), pide toda la memoria por `fxc/inc/xalloc.h` y pasa valgrind sin errores ni fugas. Es reentrante y utilizable como biblioteca (`fxc_main`, estado propio de cada hilo, errores sin `exit()`). Pruebas de referencia contra Fenix 0.92a corregido: `tools/fxc-compare.sh` (ver `PROBLEMAS.md`, 40 a 48).

@@ -6,11 +6,11 @@
 |---|---|---|
 | 0 | Andamio, documentación y árbol de Fenix 0.92a intacto en `upstream/` | hecho |
 | 1 | `src/` copiado de `upstream/` (**hecho**, con `tools/upstream-diff`); **pruebas de referencia**: conjunto de programas `.prg` con salida esperada (texto y sumas de comprobación de fotogramas) generada con Fenix 0.92a; compilación con CMake para Windows, Linux y macOS | en curso |
-| 2 | **Compilador reentrante** (`libsimurgh`): sin globales ni `exit()`; formato de `.dcb` definido y con versión | pendiente |
+| 2 | **Compilador reentrante** (`libsimurgh`): sin globales ni `exit()`; formato de `.dcb` definido y con versión. **Hecho ya (2026-11-15):** `fxc` sin SDL, `xalloc.h`, errores de memoria corregidos, valgrind limpio, `tests/fxc` + `fxc-compare.sh`. Reentrancia hecha (`fxc_main`, hilos, sin `exit()`); falta el formato nuevo de `.dcb`, que va con `fxi` | en curso |
 | 3 | **Capa glue** (SDL 1.2 y SDL2) sin cambiar el comportamiento; el renderizado queda en el núcleo | pendiente |
 | 4 | **16 bits siempre**: eliminar paletas y los 8 bits; conversión 8 → 16 al cargar; UTF-8 | pendiente |
 | 5 | `map` y `fpg` integrados; PNG en el núcleo; compatibilidad total de FPG y MAP (8 y 16 bits) | pendiente |
-| 6 | Rescatar **FenXEdit2** y que compile desde dentro | pendiente |
+| 6 | Rescatar **FenXEdit2** y que compile desde dentro | importado en `ide/`; compila y arranca; falta probar su uso |
 | 7 | Backend DOS (586, LFB, LFN opcional) y comprobación en el XO | pendiente |
 | 7a | Backend **Linux ARM** (Raspberry Pi 1 a 5): binarios `armhf` de 32 bits (ARMv6 para llegar a la Pi 1), pruebas en la Pi más lenta | pendiente |
 | 7b | Backend **Sony PSP** (pspdev; SDL 1.2 o glue propio); la toolchain se prueba primero en WSL2/Docker y, si funciona, en la VM Fedora | pendiente |
