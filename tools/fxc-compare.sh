@@ -1,12 +1,13 @@
 #!/bin/sh
-# Prueba de referencia del compilador: compila los programas de tests/fxc con el fxc de src/ y con el de referencia
-# (upstream/fenix-0.92a-fixed) y comprueba que dan lo mismo: salida del compilador, codigo de salida y .dcb.
+# Prueba de referencia del compilador: compila los programas de tests/fxc con simurgh -b (el compilador de src/) y con el fxc de
+# referencia (upstream/fenix-0.92a-fixed, solo para esta prueba: no forma parte de lo que se construye) y comprueba que dan lo
+# mismo: errores de compilacion, codigo de salida y .dcb.
 #
 #   tools/fxc-compare.sh [--no-build]
 #
-#   --no-build   no recompila: usa build/zig-probe/fxc-ref.exe y fxc-new.exe ya existentes
+#   --no-build   no recompila: usa build/zig-probe/fxc-ref.exe y simr.exe (o SIMURGH_EXE) ya existentes
 #
-# Compila con Zig (tools/zig-probe.sh). Pensado para Windows x64 (ejecuta los .exe aqui). Sale con 0 si todo coincide.
+# Compila con Zig (tools/zig-probe.sh para la referencia, tools/zig-probe-simurgh.sh para simurgh). Pensado para Windows x64 (ejecuta los .exe aqui). Sale con 0 si todo coincide.
 # Cuando un cambio en src/ deba alterar la salida a proposito (otro formato de .dcb, mensajes), hay que decidirlo aqui,
 # no ocultarlo: actualizar la referencia o anotar la diferencia esperada.
 set -u
@@ -14,9 +15,10 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 out="$root/build/zig-probe"
 if [ "${1:-}" != "--no-build" ]; then
     FXC_CFLAGS=-fcommon FXC_SRC=upstream/fenix-0.92a-fixed FXC_OUT=fxc-ref sh "$root/tools/zig-probe.sh" > "$out.ref.log" 2>&1 || { cat "$out.ref.log"; echo "[X] no se pudo compilar la referencia"; exit 2; }
-    FXC_SRC=src FXC_OUT=fxc-new sh "$root/tools/zig-probe.sh" > "$out.new.log" 2>&1 || { cat "$out.new.log"; echo "[X] no se pudo compilar src"; exit 2; }
+    sh "$root/tools/zig-probe-simurgh.sh" > "$out.new.log" 2>&1 || { cat "$out.new.log"; echo "[X] no se pudo compilar simurgh"; exit 2; }
 fi
-ref="$out/fxc-ref.exe"; new="$out/fxc-new.exe"
+exe=${SIMURGH_EXE:-simr}
+ref="$out/fxc-ref.exe"; new="$out/simurgh/$exe.exe"
 [ -x "$ref" ] && [ -x "$new" ] || { echo "Faltan $ref o $new" >&2; exit 2; }
 
 work="$out/compare"
@@ -26,8 +28,12 @@ for prg in "$root"/tests/fxc/*.prg; do
     name=$(basename "$prg" .prg); n=$((n+1))
     for v in ref new; do
         cp "$prg" "$work/$v/$name.prg"
-        ( cd "$work/$v" && "$out/fxc-$v.exe" "$name.prg" > "$name.out" 2>&1; echo $? > "$name.rc" )
-        tail -n +2 "$work/$v/$name.out" > "$work/$v/$name.txt"     # sin la 1.a linea (version y fecha de compilacion)
+        if [ "$v" = ref ]; then cmd="$ref"; else cmd="$new -b"; fi
+        ( cd "$work/$v" && $cmd "$name.prg" > "$name.out" 2>&1; echo $? > "$name.rc" )
+        # Fenix 0.92a devolvia 1 al compilar bien; Simurgh devuelve 0 (los errores, 2, no cambian)
+        [ "$v" = ref ] && [ "$(cat "$work/$v/$name.rc")" = 1 ] && echo 0 > "$work/$v/$name.rc"
+        # Solo se comparan los errores: el fxc de referencia imprime siempre banner y estadisticas, simurgh -b no imprime nada si va bien
+        grep -E '^Error' "$work/$v/$name.out" > "$work/$v/$name.txt"
     done
     problemas=""
     cmp -s "$work/ref/$name.rc" "$work/new/$name.rc"   || problemas="$problemas codigo-de-salida"

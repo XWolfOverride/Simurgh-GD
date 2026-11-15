@@ -6,8 +6,8 @@ versión 2 o (a su elección) cualquier versión posterior** (texto en `COPYING`
 
 Los ficheros de `upstream/fenix-0.92a/` son los originales sin modificar. Sus cabeceras conservan:
 
-- Copyright © 1999 José Luis Cebrián Pagüe
 - Copyright © 2002 Fenix Team
+- Copyright © 1999 José Luis Cebrián Pagüe
 
 El lenguaje de Fenix derivaba a su vez del de **DIV Games Studio** (Hammer Technologies). Simurgh no incluye código de
 DIV Games Studio.

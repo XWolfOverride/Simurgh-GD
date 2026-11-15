@@ -34,11 +34,15 @@ Este fichero es un índice de decisiones y estado; el detalle está en `DOC/` (�
 - **Herramientas integradas:** `map` y `fpg` pasan a ser parte del lenguaje (funciones). Las herramientas externas
   se retiran.
 - **Compilador reentrante** y utilizable como biblioteca (`libsimurgh`): se puede compilar desde un programa Simurgh. El
-  intérprete **no** es reentrante: ejecutar un programa compilado es lanzar otro proceso `simurgh`. El depurador
+  intérprete **no** es reentrante: ejecutar un programa compilado es lanzar otro proceso `simr`. El depurador
   se evaluará más adelante.
 - **IDE:** FenXEdit2 (IDE escrito en Fenix, unas 3 200 líneas) forma parte del proyecto (importado en `ide/FenXEdit2/`; compila con `tools/ide-compile.sh` y arranca con `fxi` de 32 bits; uso sin probar), ver `DOC/IDE-FENXEDIT2.md`.
 - **Migración:** todo cambio del lenguaje o de su biblioteca respecto a Fenix se apunta en `DOC/MIGRACION-FENIX.md` en el momento de decidirlo.
-- **Alias del compilador y `LOAD_IMAGE`:** los nombres antiguos se compilan como su destino (`LOAD_MAP`, `LOAD_PNG`, `LOAD_PCX` → `LOAD_IMAGE`, que detecta el formato por cabecera); `SAVE_MAP` y `SAVE_FPG` existen. FBM y FPL se retiran; MAP/FPG de 24 y 32 bits se leen (se convierten a 16). Ver `DOC/FORMATOS-IMAGEN.md`.
+- **No hay binarios `fxc` ni `fxi`:** solo el programa único (el nombre del ejecutable es independiente del nombre «Simurgh» que usa en sus textos; `SIMURGH_EXE` lo fija al construir). Las pruebas compilan y ejecutan con él; el único `fxc` que se construye es el de Fenix 0.92a como referencia de comparación. Los programas empotrados en el ejecutable (y con ficheros) vuelven más adelante, después de los paquetes; el ejecutable detecta un DCB pegado a sí mismo sin depender de su nombre.
+- **Un solo programa, `simr`** (nombre del ejecutable decidido; se presenta como Simurgh): `simr x.dcb` ejecuta, `simr x.prg` compila en memoria (sin salida si va bien) y ejecuta, `simr -b x.prg` solo compila. Opciones `-d`, `-i dir`, `-g`, `-c`, `-f fichero...`; el valor siempre separado; lo que va tras el fichero son argumentos del programa. Se retiran `-s -d -a -l` de fxc y `-f -r` de fxi; fxc devuelve 0 al compilar bien. Ver `DOC/MIGRACION-FENIX.md`; `tools/zig-probe-simurgh.sh` y `tools/simurgh-test.sh`.
+- **Sin `DECLARE`:** el compilador hace dos pasadas; la primera recoge las firmas de `process`/`function` (con sus `include`), así que se puede llamar antes de definir. Ver `DOC/MIGRACION-FENIX.md`.
+- **Parámetros opcionales:** funciones del sistema con la firma completa y valores por defecto (`"IISI|,,,0"` en `sysprocs.h`) y funciones/procesos del usuario con `function f(a, b=0, c)` (cualquier posición; enteros, reales y cadenas); se omiten al final o en medio con huecos (`f(a,,c)`); funciona también si se llama antes de definirlos. Ver `DOC/MIGRACION-FENIX.md`. Alfa: se conserva el cargado y se respeta al grabar; al dibujar, umbral provisional (`DOC/FORMATOS-IMAGEN.md`).
+- **Alias del compilador y `LOAD_IMAGE`:** los nombres antiguos se compilan como su destino (`LOAD_MAP`, `LOAD_PNG`, `LOAD_PCX` → `LOAD_IMAGE`, que detecta el formato por cabecera); `SAVE_MAP`, `SAVE_FPG` y `SAVE_IMAGE` (formato opcional: MAP, PNG, BMP, TGA) existen; BMP y TGA se cargan y graban sin bibliotecas. FBM, FGC y FPL se retiran; MAP/FPG de 24 y 32 bits se leen (se convierten a 16). Ver `DOC/FORMATOS-IMAGEN.md`.
 - **Compatibilidad:** nada es sagrado, pero sin alejarse de la filosofía de Fenix para poder reciclar programadores.
   El lenguaje tiene versión explícita.
 - **Objetivos:** Windows (32/64), Linux (32/64), Linux ARM (Raspberry Pi 1 a 5), macOS (Intel y Apple Silicon), OLPC XO-1, DOS con **586
@@ -57,7 +61,7 @@ Este fichero es un índice de decisiones y estado; el detalle está en `DOC/` (�
   binario de compilación sí puede cambiar.
 - **Intérprete: de momento solo 32 bits.** La VM guarda punteros en enteros de 32 bits; compilado para 64 bits se cae al cargar un
   `.dcb` (`DOC/PROBLEMAS.md`, puntos 31-32). El compilador sí funciona en 64 bits. Verificado: `fxi` de 32 bits compilado con Zig para
-  Windows arranca y muestra el menú de pruebas (`tools/zig-probe-fxi.sh`). Pendiente de decisión: modelo de punteros de 64 bits.
+  Windows arranca y muestra el menú de pruebas (`tools/zig-probe-simurgh.sh`). Pendiente de decisión: modelo de punteros de 64 bits.
 - Compilación de Fenix 0.92a verificada para el OLPC XO-1 (parche en `DOC/fenix-xo-0.92a.patch`): ver
   `DOC/COMPILACION.md`.
 - Sin repositorio git inicializado ni scripts `build.*` (se crean con la primera versión utilizable).

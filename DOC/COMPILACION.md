@@ -26,7 +26,9 @@ alternativa estándar; sin matrices de longitud variable.
 - Combinación ligera: Zig como compilador y, de MSYS2, solo `cmake`, `ninja` y `SDL2` (≈ 10 MB de descarga, ≈ 60 MB
   instalados). Depurar con MSVC o `lldb`.
 
-## Compilar `fxc` con Zig en Windows (verificado)
+## Compilar el `fxc` de referencia con Zig en Windows (verificado)
+
+Este `fxc` ya no forma parte de Simurgh (el compilador va dentro del programa único, ver más abajo): `tools/zig-probe.sh` lo construye con `FXC_SRC=upstream/fenix-0.92a-fixed` solo para compararlo con el nuevo.
 
 ```
 zig cc -target x86_64-windows-gnu -O2 -w -fcommon -DVERSION=\"0.92a\" -DTARGET_Win32 -DWIN32 -D_WIN32 \r
@@ -60,3 +62,6 @@ controladores `dummy` de SDL); falta probarlo en el propio XO.
 
 ## Pruebas (previstas)
 Ver [HOJA-DE-RUTA.md](HOJA-DE-RUTA.md): programas de referencia con salida esperada generada con Fenix 0.92a.
+
+## Programa único `simr` (prueba con Zig, Windows de 32 bits)
+`tools/zig-probe-simurgh.sh` construye `build/zig-probe/simurgh/simr.exe`: el intérprete y el compilador en un solo ejecutable (descarga SDL, SDL_mixer, libpng y zlib; `SIMURGH_EXE=nombre` cambia el nombre del ejecutable (por defecto `simr`)). Los símbolos globales que `fxc` y `fxi` definen con el mismo nombre (`string_get`, `debug`, `procs`, `sysprocs`, etc.) se renombran en el compilador con `fxc_rename.h`. El uso está en `MIGRACION-FENIX.md` y se prueba con `tools/simurgh-test.sh`. No se construyen `fxc` ni `fxi` por separado: las pruebas (`tools/simurgh-test.sh`, `image-test.sh`, `lang-test.sh`, `ide-compile.sh`) usan el programa único, y `tools/fxc-compare.sh` lo compara con el `fxc` de referencia de Fenix 0.92a.

@@ -16,10 +16,12 @@ Para desarrolladores y agentes de IA. Resumen de decisiones en [`../AGENTS.md`](
 | [HOJA-DE-RUTA.md](HOJA-DE-RUTA.md) | Fases, pruebas y temas pendientes antes de la primera versión |
 | [../tools/upstream-diff.sh](../tools/upstream-diff.sh) | Compara `src/` con `upstream/` (lista, resumen, diff) y comprueba los avisos de cambio exigidos por la GPL |
 | [../upstream/CAMBIOS.md](../upstream/CAMBIOS.md) | Fenix 0.92a corregido (versión de referencia), con su diff contra el original |
-| [../tools/zig-probe.sh](../tools/zig-probe.sh) | Compila `fxc` con Zig (sin SDL) y comprueba que el `.dcb` es reproducible; ver `COMPILACION.md` |
-| [../tools/zig-probe-fxi.sh](../tools/zig-probe-fxi.sh) | Compila `fxi` de 32 bits para Windows con Zig y SDL 1.2 y deja un directorio ejecutable |
-| [../tools/fxc-compare.sh](../tools/fxc-compare.sh) | Pruebas de referencia del compilador: `src/` frente a `upstream/fenix-0.92a-fixed` sobre `tests/fxc/` |
+| [../tools/zig-probe.sh](../tools/zig-probe.sh) | Compila el `fxc` de **referencia** (Fenix 0.92a corregido) con Zig; solo lo usan las pruebas de comparación |
+| [../tools/fxc-compare.sh](../tools/fxc-compare.sh) | Pruebas de referencia del compilador: `simr -b` frente al `fxc` de `upstream/fenix-0.92a-fixed` sobre `tests/fxc/` |
 | [../tools/fxc-reentrant.sh](../tools/fxc-reentrant.sh) | Prueba de reentrancia de `fxc` como biblioteca: serie con errores y varios hilos |
 | [../tools/ide-compile.sh](../tools/ide-compile.sh) | Compila el IDE (`ide/FenXEdit2`) |
 | [../tools/image-test.sh](../tools/image-test.sh) | Prueba de `LOAD_IMAGE`, alias, `SAVE_MAP` y `SAVE_FPG` (ejecuta `fxi` de 32 bits) |
+| [../tools/lang-test.sh](../tools/lang-test.sh) | Pruebas del lenguaje: parámetros por defecto en funciones de usuario y errores esperados |
+| [../tools/zig-probe-simurgh.sh](../tools/zig-probe-simurgh.sh) | Construye el programa único (intérprete + compilador) con Zig, descargando las dependencias; `SIMURGH_EXE=nombre` cambia el nombre del ejecutable |
+| [../tools/simurgh-test.sh](../tools/simurgh-test.sh) | Prueba los modos de `simr`: `.dcb`, `.prg` en memoria, `-b`, errores y argumentos |
 | [fenix-xo-0.92a.patch](fenix-xo-0.92a.patch) | Cambios mínimos para compilar Fenix 0.92a con libpng 1.5 y enlazado actual |
