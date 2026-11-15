@@ -1,0 +1,251 @@
+Binary files upstream/fenix-0.92a/bin/test.fpg and upstream/fenix-0.92a-fixed/bin/test.fpg differ
+diff -ruN upstream/fenix-0.92a/fxc/src/codeblock.c upstream/fenix-0.92a-fixed/fxc/src/codeblock.c
+--- upstream/fenix-0.92a/fxc/src/codeblock.c	2026-11-15 11:33:10.703443700 +0100
++++ upstream/fenix-0.92a-fixed/fxc/src/codeblock.c	2026-11-15 14:17:44.521612100 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -169,8 +170,10 @@
+ 
+ static void codeblock_alloc (CODEBLOCK * c, int count)
+ {
++	int old_reserved = c->reserved ;
+ 	c->reserved += count ;
+ 	c->data = (int *) realloc (c->data, c->reserved * sizeof(int)) ;
++	if (c->data) memset (c->data + old_reserved, 0, (c->reserved - old_reserved) * sizeof(int)) ;
+ 	if (!c->data)
+ 	{
+ 		fprintf (stdout, "CODEBLOCK: sin memoria\n") ;
+diff -ruN upstream/fenix-0.92a/fxc/src/dcbw.c upstream/fenix-0.92a-fixed/fxc/src/dcbw.c
+--- upstream/fenix-0.92a/fxc/src/dcbw.c	2026-11-15 11:33:10.658905300 +0100
++++ upstream/fenix-0.92a-fixed/fxc/src/dcbw.c	2026-11-15 14:17:44.485479000 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -105,6 +106,7 @@
+         if (strcmp(ptr, dcb_files[i].Name) == 0)
+             return ;
+ 
++	memset (&dcb_files[dcb_filecount], 0, sizeof(DCB_FILE)) ;
+ 	strcpy (dcb_files[dcb_filecount].Name, ptr) ;
+ 	dcb_files[dcb_filecount].SFile = size ;
+ 	dcb_fullname[dcb_filecount] = strdup(filename) ;
+@@ -261,7 +263,7 @@
+ 
+ 	/* 2. Crear tabla de procesos */
+ 
+-	dcb.proc = (DCB_PROC *) malloc(sizeof(DCB_PROC) * dcb.data.NProcs) ;
++	dcb.proc = (DCB_PROC *) calloc(dcb.data.NProcs, sizeof(DCB_PROC)) ;
+ 
+ 	for (n = 0 ; n < dcb.data.NProcs ; n++)
+ 	{
+@@ -292,7 +294,7 @@
+ 		SPrivate += dcb.proc[n].data.SPrivate ;
+ 		SPublic  += dcb.proc[n].data.SPublic ;
+ 
+-		dcb.proc[n].sentence = (DCB_SENTENCE *) malloc(sizeof(DCB_SENTENCE) * dcb.proc[n].data.NSentences) ;
++		dcb.proc[n].sentence = (DCB_SENTENCE *) calloc(dcb.proc[n].data.NSentences, sizeof(DCB_SENTENCE)) ;
+ 
+ 		for (i = 0 ; i < dcb.proc[n].data.NSentences ; i++)
+ 		{
+@@ -304,7 +306,7 @@
+ 
+         /* Splinter, tipos de parametros */
+ 
+-        dcb.proc[n].privar = (DCB_VAR *) malloc(sizeof(DCB_VAR) * dcb.proc[n].data.NPriVars) ;
++        dcb.proc[n].privar = (DCB_VAR *) calloc(dcb.proc[n].data.NPriVars, sizeof(DCB_VAR)) ;
+         for (i = 0 ; i < dcb.proc[n].data.NPriVars ; i++)
+         {
+                 dcb_settype (&dcb.proc[n].privar[i].Type, &procs[n]->privars->vars[i].type) ;
+@@ -313,7 +315,7 @@
+                 dcb.proc[n].privar[i].Offset = procs[n]->privars->vars[i].offset ;
+         }
+ 
+-        dcb.proc[n].pubvar = (DCB_VAR *) malloc(sizeof(DCB_VAR) * dcb.proc[n].data.NPubVars) ;
++        dcb.proc[n].pubvar = (DCB_VAR *) calloc(dcb.proc[n].data.NPubVars, sizeof(DCB_VAR)) ;
+         for (i = 0 ; i < dcb.proc[n].data.NPubVars ; i++)
+         {
+                 dcb_settype (&dcb.proc[n].pubvar[i].Type, &procs[n]->pubvars->vars[i].type) ;
+@@ -325,7 +327,7 @@
+ 
+ 	/* 3. Crear tablas globales */
+ 
+-	dcb.id = (DCB_ID *) malloc(sizeof(DCB_ID) * dcb.data.NID) ;
++	dcb.id = (DCB_ID *) calloc(dcb.data.NID, sizeof(DCB_ID)) ;
+ 
+ 	id = identifier_first() ;
+ 
+@@ -338,8 +340,8 @@
+ 		id = identifier_next(id) ;
+ 	}
+ 
+-	dcb.glovar = (DCB_VAR *) malloc(sizeof(DCB_VAR) * dcb.data.NGloVars) ;
+-	dcb.locvar = (DCB_VAR *) malloc(sizeof(DCB_VAR) * dcb.data.NLocVars) ;
++	dcb.glovar = (DCB_VAR *) calloc(dcb.data.NGloVars, sizeof(DCB_VAR)) ;
++	dcb.locvar = (DCB_VAR *) calloc(dcb.data.NLocVars, sizeof(DCB_VAR)) ;
+ 
+ 	for (n = 0 ; n < dcb.data.NGloVars ; n++)
+ 	{
+@@ -429,6 +431,7 @@
+ 	{
+ 		VARIABLE * var ;
+ 		DCB_VAR v ;
++		memset (&v, 0, sizeof(v)) ;
+ 
+ 		var = &dcb_orig_varspace[n]->vars[0] ;
+ 
+diff -ruN upstream/fenix-0.92a/fxc/src/segment.c upstream/fenix-0.92a-fixed/fxc/src/segment.c
+--- upstream/fenix-0.92a/fxc/src/segment.c	2026-11-15 11:33:10.645164500 +0100
++++ upstream/fenix-0.92a-fixed/fxc/src/segment.c	2026-11-15 14:17:44.518296600 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -73,7 +74,7 @@
+ 	s->current = 0 ;
+ 	s->reserved = 128 ;
+ 
+-	s->bytes = (int *) malloc(128) ;
++	s->bytes = (int *) calloc(1, 128) ;
+ 	if (!s->bytes) compile_error ("segment_new: out of memory\n") ;
+ 
+ 	segment_register (s) ;
+@@ -93,7 +94,7 @@
+ 	s->current = b->current ;
+ 	s->reserved = b->reserved ;
+ 
+-	s->bytes = (int *) malloc(s->reserved) ;
++	s->bytes = (int *) calloc(1, s->reserved) ;
+ 	if (!s->bytes) compile_error ("segment_new: out of memory\n") ;
+ 	memcpy (s->bytes, b->bytes, s->current) ;
+ 
+@@ -112,9 +113,11 @@
+ 
+ void segment_alloc (segment * n, int count)
+ {
++	int old_reserved = n->reserved ;
+ 	n->reserved += count ;
+ 	n->bytes = realloc (n->bytes, n->reserved) ;
+ 	if (!n->bytes) compile_error ("segment_alloc: out of memory\n") ;
++	memset ((char *)n->bytes + old_reserved, 0, n->reserved - old_reserved) ;
+ }
+ 
+ int segment_add_as (segment * n, Sint32 value, BASETYPE t)
+diff -ruN upstream/fenix-0.92a/fxc/src/strings.c upstream/fenix-0.92a-fixed/fxc/src/strings.c
+--- upstream/fenix-0.92a/fxc/src/strings.c	2026-11-15 11:33:10.718802300 +0100
++++ upstream/fenix-0.92a-fixed/fxc/src/strings.c	2026-11-15 14:17:44.481477000 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -51,7 +52,7 @@
+ 
+ void string_init ()
+ {
+-	string_mem = (char *) malloc (4096) ;
++	string_mem = (char *) calloc (1, 4096) ;
+ 	string_allocated = 4096 ;
+ 	string_used = 1 ;
+ 	string_count = 1 ;
+@@ -63,7 +64,9 @@
+ 
+ void string_alloc (int bytes)
+ {
++	int old_allocated = string_allocated ;
+ 	string_mem = (char *) realloc (string_mem, string_allocated += bytes) ;
++	if (string_mem) memset (string_mem + old_allocated, 0, bytes) ;
+ 	if (!string_mem)
+ 	{
+ 		fprintf (stdout, "string_alloc: sin memoria\n") ;
+diff -ruN upstream/fenix-0.92a/fxc/src/typedef.c upstream/fenix-0.92a-fixed/fxc/src/typedef.c
+--- upstream/fenix-0.92a/fxc/src/typedef.c	2026-11-15 11:33:10.691896900 +0100
++++ upstream/fenix-0.92a-fixed/fxc/src/typedef.c	2026-11-15 14:17:44.479223100 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - TYPEDEF a cero (salida reproducible) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -34,6 +35,7 @@
+ {
+ 	TYPEDEF t ;
+ 
++	memset (&t, 0, sizeof(t)) ;
+ 	t.chunk[0].type = type ;
+ 	if (type == TYPE_POINTER)
+ 	{
+diff -ruN upstream/fenix-0.92a/fxi/src/g_fpg.c upstream/fenix-0.92a-fixed/fxi/src/g_fpg.c
+--- upstream/fenix-0.92a/fxi/src/g_fpg.c	2026-11-15 11:33:10.136451300 +0100
++++ upstream/fenix-0.92a-fixed/fxi/src/g_fpg.c	2026-11-15 14:17:44.281471900 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - gr_read_lib: si falla la lectura de un grafico se destruye y no se anade a la libreria (antes se usaba memoria liberada) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -419,7 +420,8 @@
+ 			Uint8 * ptr = (Uint8 *)gr->data + gr->pitch*y;
+ 			if (!file_read (fp, ptr, len))
+ 			{
+-				free (gr) ;
++				bitmap_destroy (gr) ;
++				gr = NULL ;
+ 				break ;
+ 			}
+ 			if (bpp == 16)
+@@ -431,6 +433,7 @@
+ 		}
+ 
+ 
++		if (!gr) break ;	/* lectura fallida: el grafico ya se ha liberado, no se anade */
+ 		grlib_add_map (libid, gr) ;
+ 	}
+ 	return libid ;
+diff -ruN upstream/fenix-0.92a/fxi/src/img_png.c upstream/fenix-0.92a-fixed/fxi/src/img_png.c
+--- upstream/fenix-0.92a/fxi/src/img_png.c	2026-11-15 11:33:10.140748200 +0100
++++ upstream/fenix-0.92a-fixed/fxi/src/img_png.c	2026-11-15 14:17:44.318262600 +0100
+@@ -1,3 +1,4 @@
++/* Simurgh: modificado 2026-11-15 - compatible con libpng 1.5 o posterior (png_jmpbuf; sin acceso a campos opacos) */
+ /*
+  *  Fenix - Videogame compiler/interpreter
+  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
+@@ -94,7 +95,7 @@
+ 
+     /* Rutina de error */
+ 
+-    if (setjmp (png_ptr->jmpbuf))
++    if (setjmp (png_jmpbuf(png_ptr)))
+     {
+         png_destroy_read_struct (&png_ptr, &info_ptr, &end_info) ;
+         file_close (png) ;
+@@ -291,7 +292,7 @@
+ 
+     /* Fin */
+ 
+-    if (!setjmp (png_ptr->jmpbuf))
++    if (!setjmp (png_jmpbuf(png_ptr)))
+         png_read_end (png_ptr, 0) ;
+     file_close (png) ;
+     bitmap->modified = 1 ;
+@@ -349,7 +350,7 @@
+ 
+     /* Error handling... */
+ 
+-    if (setjmp(png_ptr->jmpbuf))
++    if (setjmp(png_jmpbuf(png_ptr)))
+     {
+         fclose (file) ;
+         png_destroy_write_struct (&png_ptr, NULL) ;
+@@ -395,7 +396,7 @@
+ 
+         /* Free allocated palette... */
+         png_free (png_ptr, (png_voidp) pal) ;
+-        info_ptr->palette = NULL ;
++        /* palette: campo opaco en libpng 1.5 o posterior */
+     }
+     else
+     {

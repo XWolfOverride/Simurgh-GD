@@ -1,0 +1,57 @@
+--- fxi/src/img_png.c.orig	2026-11-15 09:29:54.106321646 +0100
++++ fxi/src/img_png.c	2026-11-15 09:29:54.109321507 +0100
+@@ -94,7 +94,7 @@
+ 
+     /* Rutina de error */
+ 
+-    if (setjmp (png_ptr->jmpbuf))
++    if (setjmp (png_jmpbuf(png_ptr)))
+     {
+         png_destroy_read_struct (&png_ptr, &info_ptr, &end_info) ;
+         file_close (png) ;
+@@ -291,7 +291,7 @@
+ 
+     /* Fin */
+ 
+-    if (!setjmp (png_ptr->jmpbuf))
++    if (!setjmp (png_jmpbuf(png_ptr)))
+         png_read_end (png_ptr, 0) ;
+     file_close (png) ;
+     bitmap->modified = 1 ;
+@@ -349,7 +349,7 @@
+ 
+     /* Error handling... */
+ 
+-    if (setjmp(png_ptr->jmpbuf))
++    if (setjmp(png_jmpbuf(png_ptr)))
+     {
+         fclose (file) ;
+         png_destroy_write_struct (&png_ptr, NULL) ;
+@@ -395,7 +395,7 @@
+ 
+         /* Free allocated palette... */
+         png_free (png_ptr, (png_voidp) pal) ;
+-        info_ptr->palette = NULL ;
++        /* palette: campo opaco en libpng 1.5 */
+     }
+     else
+     {
+--- fpg/fpg.c.orig	2026-11-15 09:30:04.982323621 +0100
++++ fpg/fpg.c	2026-11-15 09:30:04.987323626 +0100
+@@ -16,6 +16,7 @@
+  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  */
+ 
++#include <zlib.h>
+ #include <stdio.h>
+ #include <string.h>
+ #include <ctype.h>
+@@ -180,7 +181,7 @@
+ 
+ 	/* Rutina de error */
+ 
+-	if (setjmp (png_ptr->jmpbuf))
++	if (setjmp (png_jmpbuf(png_ptr)))
+ 	{
+ 		png_destroy_read_struct (&png_ptr, &info_ptr, &end_info) ;
+ 		fclose (png) ;

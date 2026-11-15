@@ -1,0 +1,3 @@
+# El árbol de Fenix y el código derivado se guardan tal cual: sin normalizar finales de línea.
+upstream/** -text
+src/** -text
