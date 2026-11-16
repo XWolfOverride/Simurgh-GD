@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - sin fpl.h */
+/* Simurgh: modificado 2026-11-15 - sin fpl.h, sin FLI */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -143,7 +143,6 @@ extern int report_graphics ;
 #include "i_procdef.h"
 #include "grlib.h"
 #include "sound.h"
-#include "flic.h"
 
 extern void   do_exit       () ;
 extern int    dcb_load      (const char * filename) ;

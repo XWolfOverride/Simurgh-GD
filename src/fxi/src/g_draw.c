@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin dibujo sobre pantalla de 8 bits, sin color ni alfa de 8 bits */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -41,12 +42,10 @@
 
 #define ABS(x) ((x) < 0 ? -(x):(x))
 
-int      syscolor8 = 15 ;
 Uint16   syscolor16 = 0xFFFF ;
 Uint16   syscolor16_alpha;
 int      drawing_alpha = 255;
 Uint16 * drawing_alpha16;
-Uint8  * drawing_alpha8;
 Uint32   drawing_stipple = 0xFFFFFFFF;
 
 static DRAWING_OBJECT * drawing_objects = NULL;
@@ -54,45 +53,6 @@ static DRAWING_OBJECT * drawing_objects = NULL;
 #ifdef __GNUC__
 #define _inline inline
 #endif
-
-_inline void _HLine8_nostipple (Uint8 * ptr, Uint32 length)
-{
-    if (drawing_alpha == 255)
-    {
-        memset (ptr, syscolor8, length) ;
-    }
-    else
-    {
-        register int n;
-
-        for (n = length ; n ; n--, ptr++)
-            *ptr = drawing_alpha8[(syscolor8 << 8) + *ptr];
-    }
-}
-
-_inline void _HLine8_stipple (Uint8 * ptr, Uint32 length)
-{
-    register int n;
-
-    if (drawing_alpha == 255)
-    {
-        for (n = length ; n ; n--, ptr++)
-        {
-            if (drawing_stipple & 1)
-                *ptr = syscolor8;
-            drawing_stipple = ((drawing_stipple << 1) | (drawing_stipple & 0x80000000 ? 1:0));
-        }
-    }
-    else
-    {
-        for (n = length ; n ; n--, ptr++)
-        {
-            if (drawing_stipple & 1)
-                *ptr = drawing_alpha8[(syscolor8 << 8) + *ptr];
-            drawing_stipple = ((drawing_stipple << 1) | (drawing_stipple & 0x80000000 ? 1:0));
-        }
-    }
-}
 
 _inline void _HLine16_nostipple (Uint16 * ptr, Uint32 length)
 {
@@ -134,14 +94,6 @@ _inline void _HLine16_stipple (Uint16 * ptr, Uint32 length)
     }
 }
 
-_inline void _Pixel8 (Uint8 * ptr, int color)
-{
-    if (drawing_alpha == 255)
-        *ptr = color ;
-    else
-        *ptr = drawing_alpha8[(color << 8) + *ptr];
-}
-
 _inline void _Pixel16 (Uint16 * ptr, Uint16 color, Uint16 color_alpha)
 {
     if (drawing_alpha == 255)
@@ -171,8 +123,6 @@ int gr_get_pixel (GRAPH * dest, int x, int y)
 
     switch (dest->depth)
     {
-        case 8:
-            return ((Uint8 *)dest->data) [x + dest->pitch*y] ;
         case 16:
             return ((Uint16 *)dest->data)[x + dest->pitch*y/2] ;
         case 1:
@@ -208,9 +158,6 @@ void gr_put_pixel (GRAPH * dest, int x, int y, int color)
 
     switch (dest->depth)
     {
-        case 8:
-            _Pixel8(((Uint8 *)dest->data)+ x + dest->pitch*y, color);
-            break;
         case 16:
             _Pixel16(((Uint16 *)dest->data) + x + dest->pitch*y/2, color, gr_alpha16(drawing_alpha)[color]) ;
             break;
@@ -292,10 +239,6 @@ void gr_clear_as (GRAPH * dest, int color)
 
     switch (dest->depth)
     {
-        case 8:
-            for (y = 0 ; y < dest->height ; y++)
-                memset ((Uint8 *)dest->data + dest->pitch * y, color, dest->width) ;
-            break;
         case 16:
             for (y = 0 ; y < dest->height ; y++)
             {
@@ -356,30 +299,7 @@ void gr_vline (GRAPH * dest, REGION * clip, int x, int y, int h)
 
     if (h < 1) return ;
 
-    if (dest->depth == 8)
-    {
-        Uint8 * ptr = dest->data ;
-        ptr += dest->pitch * y + x ;
-        if (drawing_stipple != 0xFFFFFFFF)
-        {
-            while (h--)
-            {
-                if (drawing_stipple & 1)
-                    _Pixel8 (ptr, syscolor8) ;
-                drawing_stipple = ((drawing_stipple << 1) | (drawing_stipple & 0x80000000 ? 1:0));
-                ptr += dest->pitch ;
-            }
-        }
-        else
-        {
-            while (h--)
-            {
-                _Pixel8 (ptr, syscolor8) ;
-                ptr += dest->pitch ;
-            }
-        }
-    }
-    else if (dest->depth == 16)
+    if (dest->depth == 16)
     {
         Uint16 * ptr = dest->data ;
         ptr += dest->pitch * y / 2 + x ;
@@ -444,16 +364,7 @@ void gr_hline (GRAPH * dest, REGION * clip, int x, int y, int w)
 
     if (w < 1) return ;
 
-    if (dest->depth == 8)
-    {
-        Uint8 * ptr = dest->data ;
-        ptr += dest->pitch * y + x ;
-        if (drawing_stipple == 0xFFFFFFFF)
-            _HLine8_nostipple (ptr, w) ;
-        else
-            _HLine8_stipple (ptr, w) ;
-    }
-    else if (dest->depth == 16)
+    if (dest->depth == 16)
     {
         Uint16 * ptr = dest->data ;
         ptr += dest->pitch * y / 2 + x ;
@@ -470,7 +381,7 @@ void gr_hline (GRAPH * dest, REGION * clip, int x, int y, int w)
         mask = (1 << (7-(x & 7)));
         while (w--)
         {
-            if (!syscolor8)
+            if (!syscolor16)
                 *ptr &= ~mask;
             else
                 *ptr |= mask;
@@ -527,17 +438,7 @@ void gr_box (GRAPH * dest, REGION * clip, int x, int y, int w, int h)
 
     if (w < 1 || h < 1) return ;
 
-    if (dest->depth == 8)
-    {
-        Uint8 * ptr = dest->data ;
-        ptr += dest->pitch * y + x ;
-        while (h--)
-        {
-            _HLine8_nostipple (ptr, w) ;
-            ptr += dest->pitch ;
-        }
-    }
-    else if (dest->depth == 16)
+    if (dest->depth == 16)
     {
         Uint16 * ptr = dest->data ;
         ptr += dest->pitch * y / 2 + x ;
@@ -624,9 +525,7 @@ void gr_circle (GRAPH * dest, REGION * clip, int x, int y, int r)
     }
 
     dest->modified = 1 ;
-    if (dest->depth == 8) {
-        color = syscolor8;
-    } else if (dest->depth == 16) {
+    if (dest->depth == 16) {
         color = syscolor16;
     }
 
@@ -837,28 +736,7 @@ void gr_line (GRAPH * dest, REGION * clip, int x, int y, int w, int h)
         i2 = dd - h ;
     }
 
-    if (dest->depth == 8)
-    {
-        Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-
-        if (w > h) while (w--)
-        {
-            if (drawing_stipple & 1)
-                _Pixel8(ptr, syscolor8) ;
-            drawing_stipple = ((drawing_stipple << 1) | (drawing_stipple & 0x80000000 ? 1:0));
-            if (dd >= 0) ptr += hinc+vinc, dd += i2 ;
-            else         ptr += hinc,      dd += i1 ;
-        }
-        else while (h--)
-        {
-            if (drawing_stipple & 1)
-                _Pixel8(ptr, syscolor8 ) ;
-            drawing_stipple = ((drawing_stipple << 1) | (drawing_stipple & 0x80000000 ? 1:0));
-            if (dd >= 0) ptr += vinc+hinc, dd += i2 ;
-            else         ptr += vinc,      dd += i1 ;
-        }
-    }
-    else if (dest->depth == 16)
+    if (dest->depth == 16)
     {
         Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
 
@@ -1029,10 +907,8 @@ int info_object (DRAWING_OBJECT * dr, REGION * clip)
 
 static void draw_object (DRAWING_OBJECT * dr, REGION * clip)
 {
-    int b8 = syscolor8;
     int b16 = syscolor16;
 
-    syscolor8 = dr->color8;
     syscolor16 = dr->color16;
 
     switch (dr->type)
@@ -1057,7 +933,6 @@ static void draw_object (DRAWING_OBJECT * dr, REGION * clip)
             break;
     }
 
-    syscolor8 = b8;
     syscolor16 = b16;
 }
 
@@ -1085,7 +960,6 @@ int gr_drawing_new (DRAWING_OBJECT drawing, int z)
     *dr = drawing;
     dr->next = drawing_objects;
 
-    dr->color8 = syscolor8;
     dr->color16 = syscolor16;
     dr->id = gr_new_object (z, info_object, draw_object, dr);
 
@@ -1191,16 +1065,8 @@ void gr_setalpha (int value)
     value &= 0xFF;
     drawing_alpha = value;
 
-    if (enable_16bits)
-    {
-        drawing_alpha16 = gr_alpha16(255-value);
-        drawing_alpha8 = gr_alpha8(value);
-        syscolor16_alpha = gr_alpha16(value)[syscolor16];
-    }
-    else
-    {
-        drawing_alpha8 = gr_alpha8(value);
-    }
+    drawing_alpha16 = gr_alpha16(255-value);
+    syscolor16_alpha = gr_alpha16(value)[syscolor16];
 }
 
 /*
@@ -1218,30 +1084,7 @@ void gr_setalpha (int value)
 
 void gr_setcolor (int c)
 {
-    int r, g, b;
-
-    if (c == 0)
-    {
-        syscolor8 = 0;
-        syscolor16 = 0;
-    }
-    else if (!enable_16bits)
-    {
-        syscolor8 = c;
-    }
-    else
-    {
-        if (c > 255 || c < 0)
-        {
-            gr_get_rgb (c, &r, &g, &b);
-            syscolor8 = gr_find_nearest_color (r, g, b);
-        }
-        else
-        {
-            syscolor8 = c;
-        }
-        syscolor16 = c ;
-    }
+    syscolor16 = c ;       /* el color es siempre de 16 bits (RGB565): no hay paleta */
 
     if (drawing_alpha != 255)
         syscolor16_alpha = gr_alpha16(drawing_alpha)[syscolor16];

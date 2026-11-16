@@ -1,5 +1,6 @@
 // Prueba de LOAD_IMAGE (por cabecera), alias LOAD_MAP/LOAD_PNG, SAVE_MAP y SAVE_FPG
 program t_image;
+//$ancient on
 global
     int fpg, g, g2, g3, g4, f2, ok = 0, bad = 0;
 begin

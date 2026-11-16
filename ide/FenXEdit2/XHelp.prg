@@ -19,12 +19,12 @@ begin
  graph=New_window(an+13,al+21,"Ayuda de "+AppName,0,dc);
  x=160;y=50;UpIt(id);
  for (alpha=0;alpha<255;alpha+=16); frame;end;alpha=255;
- msg=1;
+ msg=MSG_REDRAW;
  loop
-  if (msg==2)
+  if (msg==MSG_CLICK)
    break;
   end;
-  if (msg==1)
+  if (msg==MSG_REDRAW)
    map_clear(0,dc,cback);
    for (i=0;i<MaxXhsa;i++)
     addlabel(dc,10,10+(i*10),XHSA[i]);
@@ -35,7 +35,7 @@ begin
   WinProc();
   frame;
  end;
- msg=256;
+ msg=MSG_CLOSING;
  for (;alpha>0;alpha-=16);frame;end;
  unload_map(0,graph);
  unload_map(0,dc);
@@ -53,13 +53,13 @@ Begin
  UpIt(id);
  For (alpha=0;alpha<255;alpha+=16);frame;end;alpha=255;
  loop
-  if (msg==2)
+  if (msg==MSG_CLICK)
    break;
   end;
   winproc();
   Frame;
  end;
- msg=256;
+ msg=MSG_CLOSING;
  for (;alpha>0;alpha-=16);frame;end;
  Unload_Map(0,graph);
  Unload_Map(0,dc);

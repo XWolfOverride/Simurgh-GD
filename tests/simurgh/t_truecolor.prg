@@ -1,5 +1,6 @@
 // Carga de MAP y FPG de 24 y 32 bits (se convierten a 16 bits)
 program t_truecolor;
+//$ancient on
 global
     int m24, m32, f24, f32, r, ok = 0, bad = 0;
 begin

@@ -37,25 +37,25 @@ graph=New_Window(an+13,al+28,hint,0,dc);
 Icon=100;
 UpIt(Id);
 For (alpha=0;alpha<255;alpha+=24);Frame;End;alpha=255;
-Msg=128;maxfil=-1;filsel=-1;afilsel=-2;
+Msg=MSG_RELOAD;maxfil=-1;filsel=-1;afilsel=-2;
 if (hint[0]==".")
  hint="/";
 end;
 ruta.hint=hint;
 Loop
-if (msg==4)
+if (msg==MSG_MODIFY)
  if ((Glob(Ruta.hint)<>"" and Fileinfo.Directory) or ((Len(Ruta.hint)==3 and Ruta.hint[1]==":") or (Ruta.hint=="/")))
   str=Ruta.Hint;
   Lastbar(&str);
   if (Str<>Hint)
    hint=str;     
-   msg=128;
+   msg=MSG_RELOAD;
   end;
  end;
 end;
-If (Msg==5)
+If (Msg==MSG_DROP)
  Switch (Drag.msg)
-  Case 2:
+  Case DRAG_MAP:
    Proc=InputBox("Guardar Mapa","Nombre de archivo",drag.Hint);frame;
    if (Proc.hint<>"")
     If (key(_Control))
@@ -65,12 +65,12 @@ If (Msg==5)
      Extensa(&proc.hint,".map");
      Save_MAP(Drag.hitag,Drag.tag,hint+Proc.hint);
     End;
-    Msg=128;
+    Msg=MSG_RELOAD;
    end;
   end;
  end;
 end;
-If (msg==128)
+If (msg==MSG_RELOAD)
  ext="";
  chdir(hint);
  Proc=0;
@@ -179,17 +179,17 @@ If (msg==128)
  End; // Str<>""
  Maxfil=proc;
  bar.hitag=maxfil-15;
- Msg=1;
+ Msg=MSG_REDRAW;
  afilsel=-2;
  Filsel=0;
  Bar.tag=0;
-End; // Msg==128
+End; // Msg==MSG_RELOAD
 
-If (msg==2)
+If (msg==MSG_CLICK)
  If (tag==1) Break;End;
- If (tag==bar) msg=1;End;
+ If (tag==bar) msg=MSG_REDRAW;End;
 End;
-If (msg==1)
+If (msg==MSG_REDRAW)
  unload_map(0,graph);
  drawing_map(0,dc);ia=-1;
  For (i=0;(i<15) AND (ia<Maxfil-1);i++)
@@ -232,7 +232,7 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
  TimToDo++;
  If (filsel>=maxfil)filsel=-1;End;
  If (Filsel<>aFilsel) 
-  Msg=1;
+  Msg=MSG_REDRAW;
   TimToDo=0;
   afilsel=filsel;
   /*
@@ -240,7 +240,7 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
    Drag.icon=Fil[FilSel].info+200;
    Drag.Control=id;
    Drag.Hint=Fil[FilSel].name;
-   Drag.Msg=1;
+   Drag.Msg=MSG_REDRAW;
   end;
   */
   if (misong>0)
@@ -262,14 +262,14 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
     Updir(&hint);
     Ruta.hint=hint;
     frame;
-    Msg=128;
+    Msg=MSG_RELOAD;
    End;
    Case 2:
     Str=Fil[Filsel].name;
     Hint=Hint+str+"/";
     Ruta.Hint=hint;
     frame;
-    Msg=128;
+    Msg=MSG_RELOAD;
    End;
    Case 3: // Bytecode Fenix Compilado (.DCB)
    end;
@@ -295,7 +295,7 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
    End;
    Case 11: // PCM
     Pcm2Wav(hint+Fil[Filsel].name);
-    msg=128;
+    msg=MSG_RELOAD;
    end;
   End;
  End;
@@ -325,7 +325,7 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
        fputs(Proc,"// IDE: "+appname+" Version:"+appversion+" [Http://www.iespana.es/Semitex/fenix/]");
        fputs(Proc,"// -------------------------------------");
        fputs(Proc,"");
-       fputs(Proc,"Program "+substr(str,0,-5)+";");
+       fputs(Proc,"Program "+substr(str,0,-4)+";");
        fputs(Proc,"Begin");
        fputs(proc,"");
        fputs(Proc," Loop");
@@ -351,10 +351,10 @@ If (Winsel==id AND Incuadre(mouse.x,mouse.y,x+ofsx+11,y+ofsy,an-36,al-28))
       MessageBox("Nuevo Directorio:","No se pudo crear el directorio!!");frame;
      end;
     end;
-    msg=128;
+    msg=MSG_RELOAD;
    end;
    Case 6:  // recargar
-    msg=128;
+    msg=MSG_RELOAD;
    end; 
   end;
  End;
@@ -368,7 +368,7 @@ else
 End;
 Frame;
 End;
-msg=256;
+msg=MSG_CLOSING;
 For (alpha=255;alpha>0;alpha-=24);Frame;End;alpha=0;
 unload_map(0,graph);
 unload_map(0,dc);

@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin tablas de alfa de 8 bits */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -45,9 +46,7 @@ static int      conversion_tables_ok = 0 ;
  * There will be less than 256 levels
  */
 static Uint16 * alpha16[256];
-static Uint8  * alpha8[256];
 static int      alpha16_tables_ok = 0 ;
-static int      alpha8_tables_ok = 0 ;
 
 /*
  *  FUNCTION : init_alpha16_tables
@@ -136,66 +135,6 @@ static void init_alpha16_tables (int count)
  *      None
  *
  */
-
-extern Uint8 nearest_table[64][64][64] ;
-
-static void init_alpha8_tables (int count)
-{
-	int     i, color, color2, inc, next = 0, factor;
-	Uint8 * table8 = NULL;
-
-	if (alpha8_tables_ok == count)
-		return;
-	if (count <= 0 || count > 128)
-		return;
-
-	inc = 256/count;
-
-	gr_fill_nearest_table();
-
-	/* Destroy existing tables */
-
-	if (alpha8_tables_ok != 0)
-	{
-		for (table8 = NULL, i = 0 ; i < 256 ; i++)
-		{
-			if (alpha8[i] != table8)
-			{
-				table8 = alpha8[i];
-				free(table8);
-			}
-			alpha8[i] = NULL;
-		}
-	}
-
-	/* Make new ones */
-
-	for (i = 0 ; i < 256 ; i++)
-	{
-		if (i == next)
-		{
-			table8  = malloc(65536);
-			factor = next+inc/2;
-			next += inc;
-			if (factor > 255) factor = 256;
-
-			for (color = 0 ; color < 256 ; color++)
-			{
-				for (color2 = 0 ; color2 < 256 ; color2++)
-				{
-					int r = (palette[color].r * factor + palette[color2].r * (255-factor));
-					int g = (palette[color].g * factor + palette[color2].g * (255-factor));
-					int b = (palette[color].b * factor + palette[color2].b * (255-factor));
-					table8[(color << 8) + color2] = nearest_table[r >> 10][g >> 10][b >> 10];
-				}
-				table8[color] = color;
-			}
-		}
-		alpha8[i] = table8;
-	}
-
-	alpha8_tables_ok = count;
-}
 
 
 /*
@@ -416,23 +355,3 @@ Uint16 * gr_alpha16 (int alpha)
 	return alpha16[alpha];
 }
 
-/*
- *  FUNCTION : gr_alpha8
- *
- *  Get an alpha translation table (a table that, given two 8 bit color,
- *  returns the composite color given the alpha value)
- *
- *  PARAMS :
- *		alpha			Alpha value for the requested table
- *
- *  RETURN VALUE :
- *      None
- *
- */
-
-Uint8 * gr_alpha8 (int alpha)
-{
-	if (alpha8_tables_ok == 0)
-		init_alpha8_tables(GLODWORD(ALPHA_STEPS));
-	return (Uint8 *) alpha8[alpha];
-}

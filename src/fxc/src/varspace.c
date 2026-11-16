@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes */
+/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes, alias height -> z con //$ancient on */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -247,7 +247,7 @@ void varspace_add (VARSPACE * n, VARIABLE v)
  *      Pointer to the variable found or NULL if none
  */
 
-VARIABLE * varspace_search (VARSPACE * n, int code)
+VARIABLE * varspace_find (VARSPACE * n, int code)
 {
 	int i ;
 
@@ -255,6 +255,20 @@ VARIABLE * varspace_search (VARSPACE * n, int code)
 		if (n->vars[i].code == code)
 			return &n->vars[i] ;
 	return 0 ;
+}
+
+/* Con //$ancient on, la variable local "height" (la altura de un proceso del modo 7 en DIV) es un alias de "z": se busca en el
+ * espacio de variables locales predefinidas (una variable propia llamada height tiene preferencia). */
+VARIABLE * varspace_search (VARSPACE * n, int code)
+{
+	VARIABLE * v = varspace_find (n, code) ;
+
+	if (!v && fxc_ancient && n == &local)
+	{
+		/* los codigos de identificador cambian de una pasada de compilacion a otra: no se guardan */
+		if (code == identifier_search_or_add ("HEIGHT")) return varspace_find (n, identifier_search_or_add ("Z")) ;
+	}
+	return v ;
 }
 
 

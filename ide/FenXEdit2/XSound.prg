@@ -68,11 +68,11 @@ Loop
   unload_map(0,graph);
   graph=new_Window(213,89,"Reproductor (FenXEdit2)",0,dc);
  End
- If ((msg==1) AND (sisoun==0) OR (larmo>-1))
+ If ((msg==MSG_REDRAW) AND (sisoun==0) OR (larmo>-1))
   unload_map(0,graph);
   graph=new_Window(213,89,"Reproductor (FenXEdit2)",0,dc);
  End;
- If (msg==2)
+ If (msg==MSG_CLICK)
   If (tag==PlaysonB)
    addlabel2(dc,xtex,19,fisound,ctext,cback,198,8,0);
    If (sisoun==0)
@@ -143,11 +143,11 @@ Loop
    Break;
   End;
  End;
- Msg=0;
+ Msg=MSG_NONE;
  Winproc();
  Frame;
 End;
-Msg=256;
+Msg=MSG_CLOSING;
 For (alpha=255;alpha>0;alpha-=16);Frame;End;unload_map(0,graph);
 unload_map(0,dc);
 End;

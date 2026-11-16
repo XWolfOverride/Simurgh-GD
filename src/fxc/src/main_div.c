@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - constantes IMG_* */
+/* Simurgh: modificado 2026-11-15 - constantes IMG_*, m7.fog_distance y m7.fog_color (niebla del modo 7), modo 8 (m8, m8_*, c_m8); 2026-11-16 - local solid y constantes SOLID_*, m8.fog_distance y m8.fog_color (niebla del modo 8) */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -190,7 +190,7 @@ char * locals_def =
 "   region ; \n"
 "   file ; \n"
 "   pointer xgraph ; \n"
-"   height ; \n"
+"   radius ; \n"
 "   resolution ; \n"
 "   alpha = 255 ; \n"
 "   size_x = 100 ; \n"
@@ -211,6 +211,12 @@ char * locals_def =
 "       pointer xgraph ; \n"
 "       priority; \n"
 "   END \n"
+"   m8_wall = -1 ; \n"
+"   m8_sector = -1 ; \n"
+"   m8_nextsector = -1 ; \n"
+"   m8_step = 32 ; \n"
+"   m8_height = 32 ; \n"
+"   solid ; \n"
 ;
 
 char * globals_def =
@@ -289,7 +295,8 @@ char * globals_def =
 "       z        = 256 ; \n"
 "       color    = 0 ; \n"
 "       flags    = 0 ; \n"
-"       reserved[1] ; \n"
+"       fog_distance = 0 ; \n"
+"       fog_color    = 0 ; \n"
 "   END \n"
 " \n"
 "   // No documentados \n"
@@ -350,6 +357,18 @@ char * globals_def =
 "   END; \n"
 "   fxi_os = -1 ;\n"
 "   sound_channels = 8 ;\n"
+" \n"
+"   // Modo 8 \n"
+" \n"
+"   STRUCT m8[9] \n"
+"       z      = 256 ; \n"
+"       camera ; \n"
+"       height = 32 ; \n"
+"       angle  = 0 ; \n"
+"       fog_distance = 0 ; \n"
+"       fog_color    = 0 ; \n"
+"       reserved1 ; reserved2 ; \n"
+"   END \n"
 " \n";
 
 struct
@@ -436,6 +455,9 @@ constants_def[] =
     { "C_SCREEN",           0 },
     { "C_SCROLL",           1 },
     { "C_M7",               2 },
+    { "C_M8",               3 },
+    { "SOLID_SPHERE",       1 },
+    { "SOLID_CYLINDER",     2 },
     { "PARTIAL_DUMP",       0 },
     { "COMPLETE_DUMP",      1 },
     { "NO_RESTORE",         -1 },

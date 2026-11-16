@@ -53,15 +53,15 @@ if (useAnims);
  For(alpha=0;alpha<255;alpha+=8);Frame;End;alpha=255;
 end;
 Loop
-If (msg==1)
+If (msg==MSG_REDRAW)
  unload_map(0,graph);
  graph=new_window(an,al,title,0,dc);
 End;
-If (msg==2) Break;End;
+If (msg==MSG_CLICK) Break;End;
 WinProc();
 Frame;
 End;
-msg=256;frame;
+msg=MSG_CLOSING;frame;
 For(alpha=255;alpha>0 and useAnims;alpha-=8);Frame;End;
 unload_map(0,graph);
 unload_map(0,dc);
@@ -84,19 +84,19 @@ if (useAnims)
  For (alpha=0;alpha<255;alpha+=16);Frame;End;alpha=255;
 end;
 Loop
-If (msg==1)
+If (msg==MSG_REDRAW)
  unload_map(0,graph);
  graph=new_Window(313,89,titl,0,dc);
 End;
-If (msg==2)
+If (msg==MSG_CLICK)
  If (tag==si) Hitag=1;Else;Hitag=0;End
  Break;
 End;
-Msg=0;
+Msg=MSG_NONE;
 Winproc();
 Frame;
 End;
-signal(father,s_wakeup);msg=256;tag=Hitag;frame;
+signal(father,s_wakeup);msg=MSG_CLOSING;tag=Hitag;frame;
 For (alpha=255;alpha>0 and useanims;alpha-=16);Frame;End;
 unload_map(0,graph);
 unload_map(0,dc);
@@ -120,17 +120,17 @@ if (useANims)
  For (alpha=0;alpha<255;alpha+=16);Frame;End;alpha=255;
 end;
 Loop
-If (msg==1)
+If (msg==MSG_REDRAW)
  unload_map(0,graph);
  graph=new_Window(313,89,titl,0,dc);
 End;
-If (msg==2)
+If (msg==MSG_CLICK)
  Break;
 End;
 Winproc();
 Frame;
 End;
-msg=256;frame;
+msg=MSG_CLOSING;frame;
 signal(father,s_wakeup);
 For (alpha=255;alpha>0 and useanims;alpha-=16);Frame;End;
 unload_map(0,graph);
@@ -157,18 +157,18 @@ if (useanims)
  for(alpha=0;alpha<255;alpha+=16);Frame;End;alpha=255;
 end;
 loop
-if (msg==1)
+if (msg==MSG_REDRAW)
  unload_map(0,graph);
  graph=new_window(313,89,titl,0,dc);
 end;
-if (msg==2)
+if (msg==MSG_CLICK)
  if (tag==1) tbx.hint=text;end;
  break;
 end;
 winproc();
 frame;
 end;
-hint=Tbx.hint;msg=256;frame;
+hint=Tbx.hint;msg=MSG_CLOSING;frame;
 // signal(father,s_wakeup);
 for(alpha=255;alpha>0 and useanims;alpha-=16);frame;end;
 unload_map(0,dc);
@@ -329,7 +329,7 @@ For (i=0;i<=len(instr);i++);
   If (str=="-")
    Text[S]=0;
   Else;
-   Text[S]=write_in_map(0,STR,0);
+   If (str=="") str=" "; End; Text[S]=write_in_map(0,STR,0);
    If (graphic_info(0,Text[s],g_Width)>an) an=graphic_info(0,text[s],g_Width);End
   End; 
   str="";
@@ -389,7 +389,7 @@ signal(father,s_wakeup);
 For (alpha=255;alpha>0;alpha-=24);Frame;End;
 unload_map(0,graph);
 For (i=0;i<=s;i++);
- unload_map(0,text[i]);
+ if (text[i]>0) unload_map(0,text[i]); end;
 End;
 // frame; // Un farme de vida de proceso para retorno de variables
 End;
@@ -475,11 +475,11 @@ if (useanims)
  For (alpha=0;alpha<255;alpha+=16);frame;end;alpha=255;
 end;
 loop
- If (msg==1)
+ If (msg==MSG_REDRAW)
   Unload_map(0,graph);
   graph=New_Window(an,al,"Calculadora",0,dc);
  end;
- If (msg==2)
+ If (msg==MSG_CLICK)
   switch(tag);
    case text:
     Text.hint=ItoA(AtoI(Text.hint));
@@ -516,7 +516,7 @@ loop
     end;
    end;
    Case bi:
-    Msg=128;
+    Msg=MSG_RELOAD;
    end;
    case 2:
     If (Todo==128) text.hint="";todo=0;end;
@@ -528,7 +528,7 @@ loop
    end;
   end;
  end;
- If (Msg==128)
+ If (Msg==MSG_RELOAD)
   Switch (todo);
    case 1:
     text.hint=ftoa(num-atof(Text.hint));
@@ -549,7 +549,7 @@ loop
  WinProc();
  frame;
 end;
-MSG=256;frame;
+MSG=MSG_CLOSING;frame;
 For (;alpha>0 and useanims;alpha-=16);frame;end;
 Unload_Map(0,graph);
 Unload_map(0,dc);
@@ -574,19 +574,19 @@ begin
  upit(id);x=220;y=190;
  for (alpha=0;alpha<255 and useanims;alpha+=16);frame;end;alpha=255;
  loop
-  if (msg==2)
+  if (msg==MSG_CLICK)
    if (tag==1)
     break;
    end;
   end;
-  if (msg==1)
+  if (msg==MSG_REDRAW)
    unload_map(0,graph);
    graph=New_Window(an,al,"Buscar y reemplazar",0,dc);
   end;
   WinProc();
   frame;
  end;
- msg=256;frame;Signal(father,s_wakeUp);
+ msg=MSG_CLOSING;frame;Signal(father,s_wakeUp);
  for (;alpha>0 and useanims;alpha-=16);frame;end;
  unload_map(0,graph);
  Unload_map(0,dc);
@@ -607,21 +607,21 @@ begin
  x=195;
  y=90;
  for(alpha=0;alpha<255 and useanims;alpha+=16);frame;end;alpha=255;
- msg=1;
+ msg=MSG_REDRAW;
  loop
-  if (msg==2)
+  if (msg==MSG_CLICK)
    if (tag==1)
     opt=0;
     break;
    end;
   end;
-  if (msg==1);
+  if (msg==MSG_REDRAW);
    
   end;
   WinProc();
   frame;
  end;
- msg=256;
+ msg=MSG_CLOSING;
  Signal(father,s_wakeUp);
  tag=opt;
  frame;

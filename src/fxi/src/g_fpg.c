@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - gr_read_lib: si falla la lectura de un grafico se destruye y no se anade a la libreria (antes se usaba memoria liberada) */
+/* Simurgh: modificado 2026-11-15 - gr_read_lib: si falla la lectura de un grafico se destruye y no se anade a la libreria (antes se usaba memoria liberada), adaptacion a 16 bits al cargar, sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -258,8 +258,6 @@ GRAPH * bitmap_get (int libid, int mapcode)
 		{
 			background_is_black = 0 ;
 
-			if (enable_16bits && background_8bits_used)
-				return background_8bits ;
 			return background ;
 		}
 
@@ -325,6 +323,8 @@ int gr_load_fpg (const char * libname)
 /* Static convenience function */
 static int gr_read_lib (file * fp)
 {
+	unsigned char filepal[768] ;
+	int have_pal = 0 ;
 	char header[8] ;
 	short int px, py ;
 	int bpp, libid, len, srcbpp = 0;
@@ -372,10 +372,9 @@ static int gr_read_lib (file * fp)
 
 	if (bpp == 8)
 	{
-		if (palette_loaded)
-			file_seek (fp, 576 + 768, SEEK_CUR) ;
-		else if (!gr_read_pal (fp))
+		if (!gr_read_pal_keep (fp, filepal))
 			return 0 ;
+		have_pal = 1 ;
 	}
 
 	while (!file_eof(fp))
@@ -455,6 +454,7 @@ static int gr_read_lib (file * fp)
 
 
 		if (!gr) break ;	/* lectura fallida: el grafico ya se ha liberado, no se anade */
+		gr = bitmap_adapt16 (gr, have_pal ? filepal : NULL) ;	/* una copia en 16 bits, convertida una sola vez al cargar */
 		grlib_add_map (libid, gr) ;
 	}
 	return libid ;
@@ -494,21 +494,6 @@ int gr_save_fpg (int libid, const char * filename)
 	memset (header, 0, 8) ;
 	memcpy (header, has_alpha ? F32_MAGIC : depth == 16 ? "f16\x1A\x0D\x0A" : depth == 1 ? "f01\x1A\x0D\x0A" : FPG_MAGIC, 6) ;
 	file_write (fp, header, 8) ;
-
-	if (depth == 8)
-	{
-		unsigned char colors[256][3] ;
-		char gamma[576] ;
-		for (i = 0 ; i < 256 ; i++)
-		{
-			colors[i][0] = palette[i].r / 4 ;
-			colors[i][1] = palette[i].g / 4 ;
-			colors[i][2] = palette[i].b / 4 ;
-		}
-		memset (gamma, 0, sizeof(gamma)) ;
-		file_write (fp, colors, 768) ;
-		file_write (fp, gamma, 576) ;
-	}
 
 	for (i = 0 ; i < lib->map_reserved ; i++)
 	{

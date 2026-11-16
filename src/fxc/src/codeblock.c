@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible) */
+/* Simurgh: modificado 2026-11-15 - memoria a cero antes de escribir el .dcb (salida reproducible), directiva //$ancient, alias solo con //$ancient on */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -76,6 +76,10 @@ void codeblock_postprocess (CODEBLOCK * code)
 				// Patch so linecount gets right
 				line_count = identifier_line(token.code) ;
 				current_file = identifier_file(token.code) ;
+				if (!fxc_ancient && sysproc_alias_target (identifier_name (ptr[1])))
+					compile_error (MSG_ANCIENT_ALIAS, identifier_name (ptr[1]), sysproc_alias_target (identifier_name (ptr[1]))) ;
+				if (!fxc_ancient && sysproc_is_ancient (identifier_name (ptr[1])))
+					compile_error (MSG_ANCIENT_FUNCTION, identifier_name (ptr[1])) ;
 				compile_error (MSG_UNDEFINED_PROC) ;
 			}
 			ptr[1] = proc->typeid ;

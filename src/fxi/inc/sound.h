@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - funciones de sonido de DIV */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -54,6 +55,12 @@ extern int      is_playing_wav		(int id);
 extern int      set_wav_volume		(int id,int volume);
 extern int      set_channel_volume  (int id,int volume);
 extern int      reserve_channels    (int id);
+extern int      load_pcm            (const char * filename, int loop);
+extern int      sound_div           (int id, int volume, int frequency);
+extern int      stop_sound_div      (int canal);
+extern int      change_sound_div    (int canal, int volume, int frequency);
+extern int      change_channel_div  (int canal, int volume, int pan);
+extern int      is_playing_sound_div(int canal);
 extern int		set_panning			(int canal,int left, int right);
 extern int		set_position		(int canal,int angle, int dist);
 extern int		set_distance		(int canal,int dist);

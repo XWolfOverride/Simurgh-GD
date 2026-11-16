@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin dibujo sobre pantalla de 8 bits, sin dibujo de 8 bits como origen */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -87,7 +88,6 @@ typedef Uint16 (ADDITIVE_BLEND)(Uint16,Uint16);
 
 Sint16  * ghost1;
 Sint16  * ghost2;
-Uint8   * ghost8;
 
 /*
     Calculates additive blend value
@@ -97,17 +97,7 @@ int bt;
 #ifdef MMX_FUNCTIONS
 Uint16 MMX_additive_blend(Uint16 A, Uint16 B){
     Uint8 m[4], n[4];
-    if (!enable_16bits){
-        A &= 0xFF ;
-        m[0] = palette[A].r ;
-        m[1] = palette[A].g ;
-        m[2] = palette[A].b ;
-
-        B &= 0xFF ;
-        n[0] = palette[B].r ;
-        n[1] = palette[B].g ;
-        n[2] = palette[B].b ;
-    }else{
+    {
         m[0] = ((A & screen->format->Rmask) >> screen->format->Rshift) ;
         m[1] = ((A & screen->format->Gmask) >> screen->format->Gshift) ;
         m[2] = ((A & screen->format->Bmask) >> screen->format->Bshift) ;
@@ -166,10 +156,7 @@ Uint16 MMX_additive_blend(Uint16 A, Uint16 B){
         }
   #endif
     }
-    if(enable_16bits)
-        return gr_rgb(m[0],m[1],m[2]);
-    else
-        return gr_find_nearest_color(m[0],m[1],m[2]);
+    return gr_rgb(m[0],m[1],m[2]);
 }
 #endif
 
@@ -194,10 +181,7 @@ Uint16 additive_blend(Uint16 A, Uint16 B){
         b+=(b2-256);
         if(b<0)b=0;
     }
-    if(enable_16bits)
-        return gr_rgb(r,g,b);
-    else
-        return gr_find_nearest_color(r,g,b);
+    return gr_rgb(r,g,b);
 
 }
 
@@ -238,7 +222,6 @@ static int compare_vertex_y (const VERTEX * a, const VERTEX * b)
 
 extern Sint16 * ghost1;
 extern Sint16 * ghost2;
-extern Uint8  * ghost8;
 /*
 void draw_span_1to1(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
                     int s, int t, int incs, int inct)
@@ -280,96 +263,6 @@ void draw_span_1to1_nocolorkey(GRAPH * dest, GRAPH * orig, int x, int y, int pix
 }
 */
 
-void draw_span_1to8(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                    int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x ;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16)/8;
-        Uint8   mask = (0x80 >> ((cs >> 16) & 7));
-        if (*tex & mask) *ptr++ = syscolor8; else ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to8_nocolorkey(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                                int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        *ptr++ = *tex;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to8_translucent(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                                int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = ghost8[(*tex << 8) + *ptr];
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to8(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                    int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = *tex;
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to8_ablend(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                            int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-
-        if (*tex != 0) *ptr = (Uint8)ablend(*tex,*ptr);
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to8_tablend(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                            int s, int t, int incs, int inct)
-{
-    Uint8 * ptr = (Uint8 *)dest->data + dest->pitch*y + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = (Uint8)ablend(ghost8[(*tex << 8) + *ptr],*ptr);
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
 void draw_span_1to16(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
                     int s, int t, int incs, int inct)
 {
@@ -385,80 +278,6 @@ void draw_span_1to16(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
     }
 }
 
-void draw_span_8to16(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                    int s, int t, int incs, int inct)
-{
-    Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = colorequiv[*tex];
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-
-void draw_span_8to16_ablend (GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-     int s, int t, int incs, int inct)
-{
-    Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = ablend(colorequiv[*tex],*ptr);
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to16_tablend(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                            int s, int t, int incs, int inct)
-{
-    Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = ablend((Uint16)(ghost1[colorequiv[*tex]] + ghost2[*ptr]),*ptr);
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to16_translucent(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                                 int s, int t, int incs, int inct)
-{
-    Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        if (*tex != 0) *ptr = ghost1[colorequiv[*tex]] + ghost2[*ptr];
-        ptr++;
-        cs += incs, ct += inct;
-    }
-}
-
-void draw_span_8to16_nocolorkey(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
-                                int s, int t, int incs, int inct)
-{
-    Uint16 * ptr = (Uint16 *)dest->data + dest->pitch*y/2 + x;
-    int cs = s, ct = t, i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        Uint8 * tex = (Uint8 *)orig->data + orig->pitch*(ct >> 16) + (cs >> 16);
-        *ptr++ = colorequiv[*tex];
-        cs += incs, ct += inct;
-    }
-}
 
 void draw_span_16to16(GRAPH * dest, GRAPH * orig, int x, int y, int pixels,
                       int s, int t, int incs, int inct)
@@ -561,78 +380,6 @@ void draw_span_16to16_nocolorkey(GRAPH * dest, GRAPH * orig, int x, int y, int p
 /* Parameter for 1to8 and 16to8 */
 static int posx;
 
-void draw_hspan_1to8 (Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-    int mask = (0x80 >> (posx & 7));
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex & mask) *scr++ = syscolor8; else scr++;
-        if (incs < 0) { if (mask == 0x80) mask = 0x01, tex--; else mask <<= 1; }
-        else          { if (mask == 0x01) mask = 0x80, tex++; else mask >>= 1; }
-    }
-}
-
-void draw_hspan_8to8_nocolorkey(Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        *scr++ = *tex;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to8_translucent(Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = ghost8[(*tex << 8) + *scr];
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to8_tablend(Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = (Uint8)ablend(ghost8[(*tex << 8) + *scr],*scr);
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to8_ablend(Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = (Uint8)ablend(*tex, *scr);
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to8(Uint8 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = *tex;
-        scr++;
-        tex += incs;
-    }
-}
-
 void draw_hspan_1to16(Uint16 * scr, Uint8 * tex, int pixels, int incs)
 {
     int i;
@@ -643,65 +390,6 @@ void draw_hspan_1to16(Uint16 * scr, Uint8 * tex, int pixels, int incs)
         if (*tex & mask) *scr++ = syscolor16; else scr++;
         if (incs < 0) { if (mask == 0x80) mask = 0x01, tex--; else mask <<= 1; }
         else          { if (mask == 0x01) mask = 0x80, tex++; else mask >>= 1; }
-    }
-}
-
-void draw_hspan_8to16(Uint16 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = colorequiv[*tex];
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to16_ablend(Uint16 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = ablend(colorequiv[*tex], *scr);
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to16_tablend(Uint16 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = ablend((Uint16)(ghost1[colorequiv[*tex]] + ghost2[*scr]),*scr);
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to16_translucent(Uint16 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        if (*tex != 0) *scr = ghost1[colorequiv[*tex]] + ghost2[*scr];
-        scr++;
-        tex += incs;
-    }
-}
-
-void draw_hspan_8to16_nocolorkey(Uint16 * scr, Uint8 * tex, int pixels, int incs)
-{
-    int i;
-
-    for (i = 0 ; i < pixels ; i++)
-    {
-        *scr++ = colorequiv[*tex];
-        tex += incs;
     }
 }
 
@@ -1040,16 +728,11 @@ void gr_rotated_blit  (GRAPH * dest, REGION * clip,
             ghost1 = gr_alpha16((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT);
             ghost2 = gr_alpha16(255-((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT));
         }
-        else if (dest->depth == 8)
-        {
-            ghost8 = gr_alpha8((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT);
-        }
         flags |= B_TRANSLUCENT ;
     }
     else if (flags & B_TRANSLUCENT)
     {
         ghost1 = ghost2 = colorghost ;
-        ghost8 = (Uint8 *)trans_table ;
     }
 /*
     if ((flags & B_TRANSLUCENT) && !trans_table_updated)
@@ -1067,55 +750,7 @@ void gr_rotated_blit  (GRAPH * dest, REGION * clip,
 
     /* Choose a line drawing function */
 
-    if (dest->depth == 8 && gr->depth == 8)
-    {
-        if (flags & B_TRANSLUCENT){
-            if(flags & B_ABLEND){
-                bt=0;
-                draw_span = draw_span_8to8_tablend;
-            }else if(flags & B_SBLEND){
-                bt=1;
-                draw_span = draw_span_8to8_tablend;
-            }else
-                draw_span = draw_span_8to8_translucent;
-        }
-        else if (flags & B_ABLEND){
-            bt=0;
-            draw_span = draw_span_8to8_ablend;
-        }else if (flags & B_SBLEND){
-            bt=1;
-            draw_span = draw_span_8to8_ablend;
-        }
-        else if (flags & B_NOCOLORKEY)
-            draw_span = draw_span_8to8_nocolorkey;
-        else
-            draw_span = draw_span_8to8;
-    }
-    else if (dest->depth == 16 && gr->depth == 8)
-    {
-        if (flags & B_TRANSLUCENT){
-            if(flags & B_ABLEND){
-                bt=0;
-                draw_span = draw_span_8to16_tablend;
-           }else if(flags & B_SBLEND){
-                bt=1;
-                draw_span = draw_span_8to16_tablend;
-            }else
-                draw_span = draw_span_8to16_translucent;
-        }
-        else if (flags & B_ABLEND){
-            bt=0;
-            draw_span = draw_span_8to16_ablend;
-        }else if (flags & B_SBLEND){
-            bt=1;
-            draw_span = draw_span_8to16_ablend;
-        }
-        else if (flags & B_NOCOLORKEY)
-            draw_span = draw_span_8to16_nocolorkey;
-        else
-            draw_span = draw_span_8to16;
-    }
-    else if (dest->depth == 16 && gr->depth == 16)
+    if (dest->depth == 16 && gr->depth == 16)
     {
         if (flags & B_TRANSLUCENT){
             if(flags & B_ABLEND){
@@ -1139,8 +774,6 @@ void gr_rotated_blit  (GRAPH * dest, REGION * clip,
         else
             draw_span = draw_span_16to16;
     }
-    else if (dest->depth == 8 && gr->depth == 1)
-        draw_span = draw_span_1to8;
     else if (dest->depth == 16 && gr->depth == 1)
         draw_span = draw_span_1to16;
     else
@@ -1361,16 +994,11 @@ void gr_blit (GRAPH * dest, REGION * clip, int scrx, int scry, int flags, GRAPH 
             ghost1 = gr_alpha16((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT);
             ghost2 = gr_alpha16(255-((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT));
         }
-        else if (dest->depth == 8)
-        {
-            ghost8 = gr_alpha8((flags & B_ALPHA_MASK) >> B_ALPHA_SHIFT);
-        }
         flags |= B_TRANSLUCENT ;
     }
     else if (flags & B_TRANSLUCENT)
     {
         ghost1 = ghost2 = colorghost ;
-        ghost8 = (Uint8 *)trans_table ;
     }
 /*
     if ((flags & B_TRANSLUCENT) && !trans_table_updated)
@@ -1388,82 +1016,7 @@ void gr_blit (GRAPH * dest, REGION * clip, int scrx, int scry, int flags, GRAPH 
 
     /* Choose a line drawing function */
 
-    if (dest->depth == 8 && gr->depth == 8)
-    {
-        if (flags & B_TRANSLUCENT){
-            if(flags & B_ABLEND){
-                bt=0;
-                draw_hspan = draw_hspan_8to8_tablend;
-            }else if(flags & B_SBLEND){
-                bt=1;
-                draw_hspan = draw_hspan_8to8_tablend;
-            }else {
-                #ifdef MMX_FUNCTIONS
-                if (MMX_available){
-                    draw_hspan = MMX_draw_hspan_8to8_translucent;
-                } else {
-                #endif
-                draw_hspan = draw_hspan_8to8_translucent;
-                #ifdef MMX_FUNCTIONS
-                }
-                #endif
-            }
-        }
-        else if(flags & B_ABLEND){
-            bt=0;
-            draw_hspan = draw_hspan_8to8_ablend;
-        }else if (flags & B_SBLEND){
-            bt=1;
-            draw_hspan = draw_hspan_8to8_ablend;
-        }
-        else if (flags & B_NOCOLORKEY) {
-            #ifdef MMX_FUNCTIONS
-            if (MMX_available){
-                draw_hspan = MMX_draw_hspan_8to8_nocolorkey;
-            } else {
-            #endif
-            draw_hspan = draw_hspan_8to8_nocolorkey;
-            #ifdef MMX_FUNCTIONS
-            }
-            #endif
-        }
-        else {
-            #ifdef MMX_FUNCTIONS
-            if (MMX_available){
-                draw_hspan = MMX_draw_hspan_8to8;
-            } else {
-            #endif
-            draw_hspan = draw_hspan_8to8;
-            #ifdef MMX_FUNCTIONS
-            }
-            #endif
-        }
-    }
-    else if (dest->depth == 16 && gr->depth == 8)
-    {
-        if (flags & B_TRANSLUCENT){
-            if(flags & B_ABLEND){
-                bt=0;
-                draw_hspan = draw_hspan_8to16_tablend;
-            }else if(flags & B_SBLEND){
-                bt=1;
-                draw_hspan = draw_hspan_8to16_tablend;
-            }else
-                draw_hspan = draw_hspan_8to16_translucent;
-        }
-        else if(flags & B_ABLEND){
-            bt=0;
-            draw_hspan = draw_hspan_8to16_ablend;
-        }else if (flags & B_SBLEND){
-            bt=1;
-            draw_hspan = draw_hspan_8to16_ablend;
-        }
-        else if (flags & B_NOCOLORKEY)
-            draw_hspan = draw_hspan_8to16_nocolorkey;
-        else
-            draw_hspan = draw_hspan_8to16;
-    }
-    else if (dest->depth == 16 && gr->depth == 16)
+    if (dest->depth == 16 && gr->depth == 16)
     {
         if (flags & B_TRANSLUCENT){
             if(flags & B_ABLEND){
@@ -1504,8 +1057,6 @@ void gr_blit (GRAPH * dest, REGION * clip, int scrx, int scry, int flags, GRAPH 
             #endif
         }
     }
-    else if (dest->depth == 8 && gr->depth == 1)
-        draw_hspan = draw_hspan_1to8;
     else if (dest->depth == 16 && gr->depth == 1)
         draw_hspan = draw_hspan_1to16;
     else

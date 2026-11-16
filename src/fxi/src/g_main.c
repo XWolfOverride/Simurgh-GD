@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - graficos de 8 y 1 bit adaptados a 16 bits al cargar; sin modo de 256 colores, sin fondo de 8 bits, sin FLI, sin paletas, modo 8 */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -58,11 +59,8 @@ SDL_Surface * screen = NULL ;
 GRAPH * background = NULL ;
 GRAPH * scrbitmap = NULL ;
 GRAPH * scrbitmap_extra = NULL ;
-GRAPH * background_8bits = NULL ;
 GRAPH * icono = NULL ;
 
-int     background_8bits_used ;
-int     enable_16bits = 0 ;
 int     enable_filtering = 0 ;
 int     enable_scale = 0 ;
 
@@ -287,7 +285,6 @@ static REGION   updaterects[128];
 static int      updaterects_count = 0;
 static Uint8    zonearray[128/8];
 
-extern int default_palette[];
 
 /* ---------------------------------------------------------------------- */
 /* Gestión de regiones                                                    */
@@ -722,7 +719,7 @@ static void do_events ()
                     if (e.key.keysym.sym == SDLK_g)
                     {
                         int shot_num = 0;
-                        GRAPH * shot = bitmap_new (0, scr_width, scr_height, enable_16bits ? 16:8, 1);
+                        GRAPH * shot = bitmap_new (0, scr_width, scr_height, 16, 1);
 
                         if (!shot) break;
                         gr_draw_screen (shot, 1, 1);
@@ -1335,6 +1332,17 @@ int compare_actions (const OBJECT * a1, const OBJECT * a2)
 //    return (a2->z - a1->z) ;
 }
 
+void draw_mode8 (void * ptr, REGION * clip)
+{
+    gr_mode8_draw ((int)ptr) ;
+}
+
+int info_mode8 (void * ptr, REGION * bbox)
+{
+    gr_mode8_bbox((int)ptr, bbox);
+    return 1;
+}
+
 void draw_mode7 (void * ptr, REGION * clip)
 {
     gr_mode7_draw ((int)ptr) ;
@@ -1355,34 +1363,6 @@ int  info_scroll (void * ptr, REGION * bbox)
 void draw_scroll (void * ptr, REGION * clip)
 {
     gr_scroll_draw ((int)ptr, 1, clip) ;
-}
-
-int info_fli (void * ptr, REGION * clip)
-{
-    if (current_fli)
-    {
-        clip->x  = current_fli_x ;
-        clip->x2 = current_fli_x + current_fli->bitmap->width ;
-        clip->y  = current_fli_y ;
-        clip->y2 = current_fli_y + current_fli->bitmap->height ;
-        return 1;
-    }
-    clip->x = clip->x2 = -1;
-    clip->y = clip->y2 = -1;
-    return 0;
-}
-
-void draw_fli (void * ptr, REGION * clip)
-{
-    if ( (current_fli = flic_do_frame (current_fli)) )
-    gr_blit (
-             0,
-             clip,
-             current_fli_x + current_fli->bitmap->width/2,
-             current_fli_y + current_fli->bitmap->height/2,
-             0,
-             current_fli->bitmap
-            ) ;
 }
 
 /*
@@ -1732,18 +1712,6 @@ void gr_draw_screen (GRAPH * dest, int restore_type, int dump_type)
             object_count++ ;
         }
 
-        if (current_fli)
-        {
-            object_list[object_count].z = 0 ;
-            object_list[object_count].info = info_fli;
-            object_list[object_count].draw = draw_fli ;
-            object_list[object_count].bbox.x  = -2 ;
-            object_list[object_count].bbox.x2 = -2 ;
-            object_list[object_count].bbox.y  = -2 ;
-            object_list[object_count].bbox.y2 = -2 ;
-            object_count++ ;
-        }
-
         /* Añade los planos de scroll que haya activos */
 
         for (n = 0 ; n < 10 ; n++)
@@ -1764,6 +1732,18 @@ void gr_draw_screen (GRAPH * dest, int restore_type, int dump_type)
 
         for (n = 0 ; n < 10 ; n++)
         {
+            if (gr_mode8_active(n))
+            {
+                object_list[object_count].z = *(int *)(&GLODWORD(M8STRUCTS) + 8*n) ;
+                object_list[object_count].draw = draw_mode8 ;
+                object_list[object_count].info = info_mode8 ;
+                object_list[object_count].what = (void *)n ;
+                object_list[object_count].bbox.x  = -2 ;
+                object_list[object_count].bbox.x2 = -2 ;
+                object_list[object_count].bbox.y  = -2 ;
+                object_list[object_count].bbox.y2 = -2 ;
+                object_count++ ;
+            }
             if (gr_mode7_active(n))
             {
                 object_list[object_count].z = *(int *)(&GLODWORD(M7STRUCTS) + 10*n + 5) ;
@@ -1823,14 +1803,12 @@ void gr_draw_screen (GRAPH * dest, int restore_type, int dump_type)
     updaterects[0].x2 = scr_width-1;
     updaterects[0].y2 = scr_height-1;
 
-    if (enable_16bits && GLODWORD(FADING))
+    if (GLODWORD(FADING))
         restore_type = -1;
 
     if (!background_is_black)
     {
-        if (enable_16bits && background_8bits_used)
-            background_dirty = 1;
-        else if (background->modified)
+        if (background->modified)
             background_dirty = 1;
     }
 
@@ -1839,9 +1817,6 @@ void gr_draw_screen (GRAPH * dest, int restore_type, int dump_type)
         /* COMPLETE_RESTORE */
         if (background_is_black) {
             gr_clear (scrbitmap) ;
-        }
-        else if (enable_16bits && background_8bits_used) {
-            gr_blit (scrbitmap, NULL, 0, 0, B_NOCOLORKEY, background_8bits);
         }
         else {
             gr_blit (scrbitmap, NULL, 0, 0, B_NOCOLORKEY, background);
@@ -1873,8 +1848,6 @@ void gr_draw_screen (GRAPH * dest, int restore_type, int dump_type)
         {
             if (background_is_black)
                 gr_box (dest, &updaterects[a], 0, 0, 9999, 9999) ;
-            else if (enable_16bits && background_8bits_used)
-                gr_blit (scrbitmap, &updaterects[a], 0, 0, B_NOCOLORKEY, background_8bits);
             else
                 gr_blit (scrbitmap, &updaterects[a], 0, 0, B_NOCOLORKEY, background);
         }
@@ -1940,7 +1913,6 @@ void gr_draw_frame ()
 
     /* Actualiza la paleta */
 
-    if (palette_changed) gr_refresh_palette() ;
 
     /* Bloquea el bitmap de pantalla */
 
@@ -1992,7 +1964,7 @@ int gr_lock_screen()
     {
         if (!scrbitmap)
         {
-            scrbitmap = bitmap_new (0, screen->w, screen->h, enable_16bits ? 16:8, 1) ;
+            scrbitmap = bitmap_new (0, screen->w, screen->h, 16, 1) ;
             bitmap_add_cpoint (scrbitmap, 0, 0) ;
             free (scrbitmap->data) ;
         }
@@ -2001,18 +1973,9 @@ int gr_lock_screen()
         scrbitmap->data   = screen->pixels ;
         scrbitmap->height = screen->h ;
 
-        if (enable_16bits)
-        {
-            scrbitmap->width  = screen->w ;
-            scrbitmap->pitch  = screen->pitch ;
-            scrbitmap->depth  = 16 ;
-        }
-        else
-        {
-            scrbitmap->width  = screen->w ;
-            scrbitmap->pitch  = screen->pitch ;
-            scrbitmap->depth  = 8 ;
-        }
+        scrbitmap->width  = screen->w ;
+        scrbitmap->pitch  = screen->pitch ;
+        scrbitmap->depth  = 16 ;
     }
     else
     {
@@ -2021,9 +1984,9 @@ int gr_lock_screen()
         if (!scrbitmap)
         {
             if (enable_scale || scale_mode != SCALE_NONE)
-                scrbitmap = bitmap_new (0, screen->w/2, screen->h/2, enable_16bits ? 16:8, 1) ;
+                scrbitmap = bitmap_new (0, screen->w/2, screen->h/2, 16, 1) ;
             else
-                scrbitmap = bitmap_new (0, screen->w, screen->h, enable_16bits ? 16:8, 1) ;
+                scrbitmap = bitmap_new (0, screen->w, screen->h, 16, 1) ;
             bitmap_add_cpoint (scrbitmap, 0, 0) ;
         }
     }
@@ -2049,34 +2012,7 @@ void gr_unlock_screen()
         }
         aux_scale_mode = (scale_mode != SCALE_NONE) ? scale_mode : SCALE_SCALE2X;
 
-        if (scrbitmap->depth == 8)
-        {
-            Uint8 * original;
-            Uint16 * extra;
-            int length = scrbitmap->width * scrbitmap->height, n;
-
-            if (scrbitmap_extra == NULL
-                || scrbitmap_extra->width != scrbitmap->width
-                || scrbitmap_extra->height != scrbitmap->height)
-            {
-                if (scrbitmap_extra)
-                    bitmap_destroy (scrbitmap_extra);
-                scrbitmap_extra = bitmap_new (0, scrbitmap->width, scrbitmap->height, 16, 1);
-            }
-
-            original = scrbitmap->data;
-            extra = scrbitmap_extra->data;
-
-            for (n = 0 ; n < 256 ; n++)
-                colorequiv[n] = SDL_MapRGB (screen->format,palette[n].r, palette[n].g, palette[n].b) ;
-
-            while (length--)
-                *extra++ = colorequiv[*original++];
-
-            scr=scrbitmap_extra;
-        } else {
-            scr=scrbitmap;
-        }
+        scr=scrbitmap;
 
         /* Esto podria ir en un modulo aparte */
         switch ( aux_scale_mode ) {
@@ -2142,7 +2078,6 @@ void gr_unlock_screen()
     }
     else
     {
-        if (enable_16bits)
         {
             Uint16 * ptr, * orig ;
 
@@ -2176,19 +2111,6 @@ void gr_unlock_screen()
                 }
             }
         }
-        else
-        {
-            Uint8 * ptr, * orig ;
-
-            orig = scrbitmap->data ;
-            ptr  = screen->pixels ;
-            for (a = 0 ; a < screen->h ; a++)
-            {
-                memcpy (ptr, orig, screen->w) ;
-                orig += scrbitmap->pitch ;
-                ptr  += screen->pitch ;
-            }
-        }
 
         SDL_UnlockSurface (screen) ;
         SDL_UpdateRect (screen, 0, 0, 0, 0) ;
@@ -2204,7 +2126,6 @@ void gr_init(int width, int height)
     if (globaldata)
     {
         /* Mode depth change! Background is no longer usable */
-        enable_16bits  = (GLODWORD(GRAPH_MODE) & MODE_16BITS       ) ? 1 : 0 ;
         enable_scale   = (GLODWORD(GRAPH_MODE) & MODE_2XSCALE      ) ? 1 : 0 ;
         full_screen    = (GLODWORD(GRAPH_MODE) & MODE_FULLSCREEN   ) ? 1 : 0 ;
         double_buffer  = (GLODWORD(GRAPH_MODE) & MODE_DOUBLEBUFFER ) ? 1 : 0 ;
@@ -2218,10 +2139,7 @@ void gr_init(int width, int height)
     }
 
     if (background) bitmap_destroy (background);
-    if (background_8bits) bitmap_destroy (background_8bits);
     background = NULL;
-    background_8bits = NULL;
-    background_8bits_used = 0;
 
     /* Inicializa el modo gráfico */
 
@@ -2240,12 +2158,7 @@ void gr_init(int width, int height)
     // Icono...
     // Necesitamos crar una surface a partir de un MAP generico de 16x16...
     if (icono) {
-        if (icono->depth == 8) {
-            ico = SDL_CreateRGBSurfaceFrom(icono->data,32,32,8,32,0x00,0x00,0x00,0x00) ;
-            SDL_SetPalette(ico, SDL_LOGPAL , palette, 0, 256);
-        } else {
             ico = SDL_CreateRGBSurfaceFrom(icono->data,32,32,16,64,0xF800,0x07E0,0x001F,0x00) ;
-        }
         SDL_SetColorKey(ico, SDL_SRCCOLORKEY, SDL_MapRGB(ico->format,0,0,0)) ;
         SDL_WM_SetIcon(ico, NULL);
         SDL_FreeSurface(ico) ;
@@ -2273,7 +2186,7 @@ void gr_init(int width, int height)
 
     if (screen) SDL_FreeSurface(screen) ;
 
-    screen = SDL_SetVideoMode (width, height,((enable_16bits || (enable_scale || scale_mode != SCALE_NONE)) ? 16:8), sdl_flags);
+    screen = SDL_SetVideoMode (width, height,16, sdl_flags);
 
     if (grab_input)
         SDL_WM_GrabInput(SDL_GRAB_ON) ;
@@ -2314,12 +2227,9 @@ void gr_init(int width, int height)
 
     }
 
-    for (n = 0 ; n < 256 ; n++)
-        colorequiv[n] = SDL_MapRGB (screen->format,palette[n].r, palette[n].g, palette[n].b) ;
-
     if (!scr_initialized)   scr_initialized = 1 ;
 
-    if (report_graphics)    gr_con_printf ("[GRAPH] Graphic mode started - %dx%d - %s\n", width, height, enable_16bits ? "16 bits":"8 bits") ;
+    if (report_graphics)    gr_con_printf ("[GRAPH] Graphic mode started - %dx%d - %s\n", width, height, "16 bits") ;
 
     if (enable_16bits)
     {
@@ -2353,7 +2263,7 @@ void gr_init(int width, int height)
     if (!background || scr_width != width || scr_height != height)
     {
         if (background) bitmap_destroy (background);
-        background = bitmap_new (0, width, height, enable_16bits ? 16:8, 1) ;
+        background = bitmap_new (0, width, height, 16, 1) ;
         assert (background) ;
         gr_clear (background) ;
         bitmap_add_cpoint (background, 0, 0) ;
@@ -2361,32 +2271,9 @@ void gr_init(int width, int height)
         background_is_black = 1 ;
     }
 
-    if (enable_16bits)
-    {
-        if (!background_8bits || scr_width != width || scr_height != height)
-        {
-            if (background_8bits) bitmap_destroy (background_8bits) ;
-            background_8bits = bitmap_new (0, width, height, 8, 1) ;
-            assert (background_8bits) ;
-            gr_clear (background_8bits) ;
-            bitmap_add_cpoint (background_8bits, 0, 0) ;
-            background_8bits_used = 0 ;
-        }
-    }
 
     scr_width = width ;
     scr_height = height ;
-
-    /* Paleta de colores por defecto */
-
-    if (!palette_loaded)
-    {
-        for (n = 0 ; n < 256 ; n++)
-            gr_set_rgb (n, default_palette[n*3]/4, default_palette[n*3+1]/4, default_palette[n*3+2]/4) ;
-    }
-
-    gr_refresh_palette() ;
-    gr_make_trans_table();
 
     next_frame_ticks = SDL_GetTicks() + frame_ms ;
 

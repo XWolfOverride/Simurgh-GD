@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - graficos de 8 y 1 bit adaptados a 16 bits al cargar; sin modo de 256 colores, sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -330,6 +331,8 @@ static int gr_font_loadfrom (file * fp)
 	int types, i, id;
 	Uint32 y;
 	FONT * f;
+	unsigned char filepal[768];
+	int have_pal = 0;
 
 	struct
 	{
@@ -372,10 +375,8 @@ static int gr_font_loadfrom (file * fp)
 
 	if (bpp == 8)
 	{
-		if (palette_loaded)
-			file_seek (fp, 576 + 768, SEEK_CUR) ;
-		else
-			if (!gr_read_pal (fp)) return -1 ;
+		if (!gr_read_pal_keep (fp, filepal)) return -1 ;
+		have_pal = 1;
 	}
 
 	/* Read the character data (detect old format) */
@@ -467,8 +468,13 @@ static int gr_font_loadfrom (file * fp)
 				gr_convert16_565ToScreen ((Uint16 *)ptr, gr->width);
 		}
 
+		/* Las letras de 8 bits se adaptan a 16 bits una sola vez, con la paleta del propio fichero */
+		if (gr->depth == 8)
+			f->glyph[i].bitmap = bitmap_adapt16 (gr, have_pal ? filepal : NULL) ;
+
 		f->glyph[i].yoffset = chardata[i].yoffset ;
 	}
+	if (f->bpp == 8) f->bpp = 16;
 	if (f->glyph[32].xadvance == 0)
 		f->glyph[32].xadvance = 4 ;
 
@@ -546,24 +552,6 @@ int gr_font_save (int fontid, const char * filename)
 	memcpy (header, "fnx\x1a\x0d\x0a\x00", 7);
 	header[7] = font->bpp;
 	gzwrite (file, &header, 8);
-
-	/* Write the palette */
-
-	if (font->bpp == 8)
-	{
-		Uint8   colors[256][3];
-		Uint8 * block = calloc(576,1) ;
-
-		for (n = 1 ; n < 256 ; n++)
-		{
-			colors[n][0] = palette[n].r >> 2 ;
-			colors[n][1] = palette[n].g >> 2 ;
-			colors[n][2] = palette[n].b >> 2 ;
-		}
-		gzwrite (file, &colors, 768) ;
-		gzwrite (file, block, 576) ;
-		free(block) ;
-	}
 
 	/* Write the character information */
 

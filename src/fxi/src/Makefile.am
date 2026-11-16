@@ -1,3 +1,4 @@
+# Simurgh: modificado 2026-11-15 - sin g_flic.c (FLI eliminado), g_mode8.c
 bin_PROGRAMS = fxi
 
 .rc.o:
@@ -12,7 +13,7 @@ fxi_LDFLAGS = --as-needed
 SOURCE_FILES = main.c dcbr.c instance.c strings.c \
               i_main.c i_debug.c i_func.c \
 	          g_main.c g_maps.c g_blit.c g_texts.c g_pal.c g_draw.c \
-		      g_systexts.c g_console.c g_scroll.c g_flic.c g_mode7.c \
+		      g_systexts.c g_console.c g_scroll.c g_mode7.c g_mode8.c \
 		      img_png.c img_pcx.c sound.c pathfind.c fnc_exports.c \
 		      g_conversion.c g_font.c g_fpg.c g_blendop.c f_bgload.c \
 		      f_cd.c f_sort.c fbm.c fgc.c fpl.c f_joystick.c i_copy.c  \

@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - sin dependencia de SDL (simtypes.h) */
+/* Simurgh: modificado 2026-11-15 - sin dependencia de SDL (simtypes.h), directiva //$ancient */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -139,6 +139,7 @@ extern void sysstub_reset (void) ;
 /* Prepara el estado del compilador para una pasada (tablas de errores, tipos, identificadores, constantes, cadenas...) */
 static void fxc_pass_init (void)
 {
+	fxc_ancient = 0 ;
 	memset (&dcb, 0, sizeof(dcb));
 
 	/* build error messages list */
@@ -316,6 +317,7 @@ static void fxc_cleanup (int keep_paths)
 	cmain_reset () ;
 	sysstub_reset () ;
 	debug = 0 ;
+	fxc_ancient = 0 ;
 	path_file = 5 ;
 	n_files = 0 ;
 	dcb_options = 0 ;

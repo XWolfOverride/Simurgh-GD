@@ -247,7 +247,6 @@ typedef struct _drawing_object
 	int level;
 
 	/* Private */
-	int color8;
 	int color16;
 	int id;
 	struct _drawing_object * next;

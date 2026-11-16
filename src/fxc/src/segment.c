@@ -204,7 +204,7 @@ VARIABLE * variable_new ()
 
 /* Segmentos nombrados */
 
-#define MAX_NAMED 64
+#define MAX_NAMED 1024
 static FXC_TLS segment * named_segs[MAX_NAMED] ;
 static FXC_TLS int       named_codes[MAX_NAMED] ;
 static FXC_TLS int       named_count = 0 ;

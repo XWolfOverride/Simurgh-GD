@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - RADIUS en el hueco de HEIGHT, modo 8; 2026-11-16 - SOLID (procesos solidos de los modos 7 y 8) */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -129,6 +130,8 @@
 #define FXI_OS			4*834
 #define SOUND_CHANNELS	4*835
 
+#define M8STRUCTS		4*836		/* 10 estructuras de 8 enteros (modo 8) */
+
 /* ----------------------------------------- */
 /* Offsets de los datos locales predefinidos */
 /* ----------------------------------------- */
@@ -166,7 +169,7 @@
 #define REGIONID    	4*30
 #define FILEID  		4*31
 #define XGRAPH  		4*32
-#define HEIGHT  		4*33
+#define RADIUS  		4*33		/* radio del proceso para las colisiones de los modos 3D (antes HEIGHT) */
 #define RESOLUTION		4*34
 #define ALPHA           4*35
 #define GRAPHSIZEX      4*36
@@ -185,3 +188,9 @@
 #define SAVED_FILE		4*49
 #define SAVED_XGRAPH	4*50
 #define SAVED_PRIORITY  4*51
+#define M8_WALL         4*52
+#define M8_SECTOR       4*53
+#define M8_NEXTSECTOR   4*54
+#define M8_STEP         4*55
+#define M8_HEIGHT       4*56
+#define SOLID           4*57		/* 0 = no es solido, 1 = esfera, 2 = cilindro (modos 7 y 8) */

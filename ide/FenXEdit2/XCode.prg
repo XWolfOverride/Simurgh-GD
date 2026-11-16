@@ -16,7 +16,7 @@ if (cwins<maxcwins)
    CloseCode();
    cWinsel=tag;
    OpenCode();
-   lt.msg=1;
+   lt.msg=MSG_REDRAW;
   end;
  else
   if (cWinsel>=0) CloseCode();end;
@@ -27,7 +27,7 @@ if (cwins<maxcwins)
   cWinSel=cWins;
   OpenCode();
   cWins++;
-  Lt.Msg=1;
+  Lt.Msg=MSG_REDRAW;
  end;
 else
  MessageBox(AppName,"No mas de "+itoa(maxCWins)+" ventanas");frame;//---------------------------
@@ -43,7 +43,7 @@ Begin
 graph=new_map(500,460,16); 
 set_center(0,graph,0,0);
 x=140;y=480;z=500;
-Cur=Cursor();Msg=1;
+Cur=Cursor();Msg=MSG_REDRAW;
 Loop
 While (y==480)
  Frame;
@@ -52,13 +52,13 @@ If (ToWinsel==0)
  If (mouse.wheeldown)
   IF (Key(_control))
    cWin[cWinSel].sx+=10;
-   Msg=1;
+   Msg=MSG_REDRAW;
   Else
    cWin[cWinSel].sy+=10;
    Hitag=10;
    If (cWin[cWinSel].sy>Code.count) Hitag=10-(Code.count-cWin[cWinSel].sy);cWin[cWinSel].sy=(code.count);End;
    Tag=map_clone(0,graph);
-   Msg=746-hitag;
+   Msg=MSG_SCROLL_DOWN+46-hitag;
    Map_xput(0,graph,tag,0,-(10*hitag),0,100,128);
    Unload_map(0,tag);
   end;
@@ -67,13 +67,13 @@ If (ToWinsel==0)
   If (key(_control))
    cWin[cWinSel].sx-=10;
    if (cWin[cWinSel].sx<0) cWin[cWinSel].sx=0;end;
-   Msg=1;
+   Msg=MSG_REDRAW;
   Else
    cWin[cWinSel].sy-=10;
    Hitag=10;
    If (cWin[cWinSel].sy<0) Hitag=10+cWin[cWinSel].sy;cWin[cWinSel].sy=0;End;
    Tag=Map_Clone(0,graph);
-   Msg=600+hitag;
+   Msg=MSG_SCROLL_UP+hitag;
    Map_xput(0,graph,tag,0,10*hitag,0,100,128);
    Unload_map(0,tag);
   end;
@@ -87,15 +87,15 @@ If (ToWinsel==0)
    Case 7,8: // borrar suprimir
     if (!((cWin[cWinSel].lin==code.count and cWin[cWinSel].col==len(code.line[cWin[cWinSel].lin]) and i==7) or
         (cWin[cWinSel].lin==0 and cWin[cWinSel].col==0 and i==8))) 
-     if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=1;End;
-     tb.msg=1;
-     Msg=500+(cWin[cWinSel].lin-cWin[cWinSel].sy);
+     if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=MSG_REDRAW;End;
+     tb.msg=MSG_REDRAW;
+     Msg=MSG_ROW+(cWin[cWinSel].lin-cWin[cWinSel].sy);
      if ((cWin[cWinSel].col==0 and i==8) or (cWin[cWinSel].col==len(code.line[cWin[cWinSel].lin])and i==7))
       if (cWin[cWinSel].col==0 and i==8)
        cWin[cWinSel].lin--;
        cWin[cWinSel].col=len(Code.line[cWin[cWinSel].lin]);
       end;
-      Msg=700+(cWin[cWinSel].lin-cWin[cWinSel].sy);
+      Msg=MSG_SCROLL_DOWN+(cWin[cWinSel].lin-cWin[cWinSel].sy);
       Code.line[cWin[cWinSel].lin]+=Code.line[cWin[cWinSel].lin+1];
       for (a=cWin[cWinSel].lin+1;a<code.count;a++)
        Code.line[a]=code.line[a+1];
@@ -125,15 +125,15 @@ If (ToWinsel==0)
      Insert(&code.line[cWin[cWinSel].lin],cWin[cWinSel].col," ");
      cWin[cWinSel].col++;
     end;
-    msg=500+(cWin[cWinSel].lin-cWin[cWinSel].sy);
+    Msg=MSG_ROW+(cWin[cWinSel].lin-cWin[cWinSel].sy);
    end;
    Case 13: // enter
-    if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=1;End;
+    if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=MSG_REDRAW;End;
     For (a=code.count;a>cWin[cWinSel].lin-1;a--)
      Code.line[a+1]=code.line[a];
     end;
     Code.count++;
-    msg=700+(cWin[cWinSel].lin-cWin[cWinsel].sy);
+    Msg=MSG_SCROLL_DOWN+(cWin[cWinSel].lin-cWin[cWinsel].sy);
     if (cWin[cWinSel].col==0)
      Code.line[cWin[cWinSel].lin]="";
     else
@@ -141,7 +141,7 @@ If (ToWinsel==0)
       Code.Line[cWin[cWinSel].lin+1]="";
      else
       Code.line[cWin[cWinSel].lin]  =SubStr(Code.line[cWin[cWinSel].lin]  ,0,cWin[cWinSel].col);
-      Code.line[cWin[cWinsel].lin+1]=SubStr(Code.line[cWin[cWinSel].lin+1],cWin[cWinSel].col,-1);
+      Code.line[cWin[cWinsel].lin+1]=SubStr(Code.line[cWin[cWinSel].lin+1],cWin[cWinSel].col);
      end;
     end;
     cWin[cWinSel].lin++;
@@ -188,7 +188,7 @@ If (ToWinsel==0)
     cWin[cWinSel].lin+=20;
    end;
    Case 32..255:
-    if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=1;End;
+    if (cWin[cWinSel].saved) cWin[cWinSel].saved=0;tb.msg=MSG_REDRAW;End;
     if (cWin[cWinSel].col<len(Code.line[cWin[cWinSel].lin]))
      insert(&Code.line[cWin[cWinSel].lin],cWin[cWinSel].col,chr(i));
     else
@@ -198,7 +198,7 @@ If (ToWinsel==0)
      Code.line[cWin[cWinSel].lin]+=chr(i);
     end;
     cWin[cWinSel].col++;
-    msg=500+(cWin[cWinSel].lin-cWin[cWinSel].sy);
+    Msg=MSG_ROW+(cWin[cWinSel].lin-cWin[cWinSel].sy);
    end;
   end; 
   if (cWin[cWinSel].lin>Code.count)
@@ -211,34 +211,34 @@ If (ToWinsel==0)
    msg=abs(cWin[cWinSel].lin-cWin[cWinSel].sy)-1;
    cWin[cWinSel].sy=cWin[cWinSel].lin;
    if (msg>40)
-    Msg=1;
+    Msg=MSG_REDRAW;
    else
     Tag=Map_clone(0,graph);
     Map_xput(0,graph,tag,0,(msg+1)*10,0,100,128);
     unload_map(0,tag);
-    msg+=600;
+    msg+=MSG_SCROLL_UP;
    end;
   end;
   if (cWin[cWinSel].lin>cWin[cWinSel].sy+45)
    msg=(45+((cWin[cWinSel].sy+45)-cWin[cWinSel].lin))+1;
    cWin[cWinSel].sy=cWin[cWinSel].lin-45;
    if (msg<1)
-    msg=1;
+    msg=MSG_REDRAW;
    else
     tag=Map_clone(0,graph);
     Map_xput(0,graph,tag,0,((msg-46)*10),0,100,128);
     unload_map(0,tag);
-    msg+=700;
+    msg+=MSG_SCROLL_DOWN;
    end;
   end;
   if (cWin[cWinSel].col<cWin[cWinSel].sx)
    cWin[cWinSel].sx=cWin[cWinSel].col-2;
    if (cWin[cWinSel].sx<0) cWin[cWinSel].sx=0;end;
-   msg=1;
+   msg=MSG_REDRAW;
   end;
   if (cWin[cWinSel].col>cWin[cWinSel].sx+74)
    cWin[cWinSel].sx=cWin[cWinSel].col-50;
-   msg=1;
+   msg=MSG_REDRAW;
   end;
  end;
 End;
@@ -254,37 +254,37 @@ If (towinsel==0 and cWinSel>=0)
   if (i<1) i=1;end;
   cWin[cWinSel].lin=i;
   cWin[cWinsel].sy=i;
-  msg=1;
+  msg=MSG_REDRAW;
  end;
  if (key(_f9))
   a=ProcBox();frame;
  end;
 end;
-If (msg==1 or Msg>=500)
+If (msg==MSG_REDRAW or Msg>=MSG_ROW)
  If (Code.count>=0);
-  if (!UseCodeCut) Msg=1;end;
+  if (!UseCodeCut) Msg=MSG_REDRAW;end;
   Switch (msg)
    Case 1:
     Map_clear(0,graph,0);
     Ini=0;
     Fin=46;
    end;
-   Case 500..550:
-    Ini=Msg-500;
+   Case MSG_ROW..MSG_ROW+50:
+    Ini=Msg-MSG_ROW;
     Fin=ini+1;
     Drawing_map(0,graph);
     Drawing_color(0);
     Draw_box(0,ini*10,500,(ini+1)*10);
    end;
-   Case 600..650:
+   Case MSG_SCROLL_UP..MSG_SCROLL_UP+50:
     Ini=0;
-    Fin=(Msg-600)+1;
+    Fin=(Msg-MSG_SCROLL_UP)+1;
     Drawing_map(0,graph);
     Drawing_color(0);
     Draw_Box(0,0,500,(fin)*10);
    end;
-   Case 700..750:
-    ini=msg-700;
+   Case MSG_SCROLL_DOWN..MSG_SCROLL_DOWN+50:
+    ini=msg-MSG_SCROLL_DOWN;
     Fin=46;
     Drawing_map(0,graph);
     Drawing_color(0);
@@ -305,7 +305,7 @@ If (msg==1 or Msg>=500)
    end;
   End;
  End;
- Msg=0;
+ Msg=MSG_NONE;
 End;
 Frame;
 End;
@@ -345,7 +345,7 @@ if (Code.count==0)
  Code.line[0]="";
  Code.Count++;
 end;
-cWin[cWinSel].Saved=1;tb.msg=1;
+cWin[cWinSel].Saved=1;tb.msg=MSG_REDRAW;
 End;
 
 Process CloseCode();
@@ -360,7 +360,7 @@ if (cWinSel>=0 and !cWin[cWinSel].saved)
   fputs(f,Code.Line[x]);
  end;
  fclose(f);
- cWin[cWinSel].Saved=1;tb.msg=1;
+ cWin[cWinSel].Saved=1;tb.msg=MSG_REDRAW;
 end;
 End;
 
@@ -418,7 +418,7 @@ while (i<len(Text))
   if (Hint=="""") Set_text_color(cString);end;
   mp=write_in_map(CF,Hint,0);
   map_put(0,graph,mp,x+((i-cWin[cWinSel].sx)*6),y);
-  unload_map(0,mp);
+  if (mp>0) unload_map(0,mp); end;
  end;
  i+=l;
 End;
@@ -431,7 +431,7 @@ begin
   Mp=Write_In_Map(cf,text,0);
  Else
   If (Len(text)>cWin[cWinSel].sx)
-   Mp=Write_in_map(cf,Substr(text,cWin[cWinSel].sx,-1),0);
+   Mp=Write_in_map(cf,Substr(text,cWin[cWinSel].sx),0);
   Else
    Mp=0;
   End;
@@ -450,25 +450,22 @@ begin
   if (pos==0)
    [str]=ch+[str];
   else
-   [str]=Substr([str],0,pos)+ch+substr([str],pos,-1);
+   [str]=Substr([str],0,pos)+ch+substr([str],pos);
   end;
  end;
 end;
 // 
 Process Delete (String pointer str,Int pos,num);
 begin;
+ // pos: posicion (desde 1) del primer caracter a borrar
  if (len([str])<num+1)
   [str]="";
  else
   pos--;
   if (pos==0)
-   [str]=Substr([str],num,-1);
+   [str]=Substr([str],num);
   else
-   if (pos+1>=len([str]))
-    [str]=Substr([str],0,-(num+1));
-   else
-    [str]=Substr([str],0,pos)+Substr([str],pos+num,-1);
-   end;
+   [str]=Substr([str],0,pos)+Substr([str],pos+num);
   end;
  end;
 end;

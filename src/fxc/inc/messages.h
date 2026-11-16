@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - estado propio de cada hilo (reentrancia de fxc) */
+/* Simurgh: modificado 2026-11-15 - estado propio de cada hilo (reentrancia de fxc), directiva //$ancient, alias solo con //$ancient on */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -94,6 +94,8 @@
 #define MSG_INVALID_CHAR        "Invalid Character"
 #define MSG_TOO_MANY_TYPES      "Too many user-defined types"
 #define MSG_UNDEFINED_PROC      "Undefined procedure"
+#define MSG_ANCIENT_ALIAS       "%s is an old name: use %s, or add //$ancient on before using it"
+#define MSG_ANCIENT_FUNCTION    "%s is an old DIV function that Simurgh only accepts as an empty one: add //$ancient on before using it"
 #define MSG_NO_COMPATIBLE_DLL	"The library is not Fenix compatible"
 #define MSG_TOO_MANY_SYSPROCS	"Too many system functions"
 #define MSG_NO_DEFAULT_PARAM	"Function %s: parameter %d has no default value"
@@ -181,6 +183,8 @@
 #define MSG_INVALID_CHAR        "Caracter invalido"
 #define MSG_TOO_MANY_TYPES      "Demasiados tipos definidos por el usuario"
 #define MSG_UNDEFINED_PROC      "Procedimiento no definido"
+#define MSG_ANCIENT_ALIAS       "%s es un nombre antiguo: usa %s, o escribe //$ancient on antes de usarlo"
+#define MSG_ANCIENT_FUNCTION    "%s es una funcion antigua de DIV que Simurgh solo acepta como funcion vacia: escribe //$ancient on antes de usarla"
 #define MSG_NO_COMPATIBLE_DLL	"La libreria no es compatible Fenix"
 #define MSG_TOO_MANY_SYSPROCS	"Demasiadas funciones del sistema"
 #define MSG_NO_DEFAULT_PARAM	"Funcion %s: el parametro %d no tiene valor por defecto"

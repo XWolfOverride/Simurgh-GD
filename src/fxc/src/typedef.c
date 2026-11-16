@@ -178,7 +178,7 @@ int typedef_size (TYPEDEF t)
 
 /* Tipos nombrados (structs, típicamente) */
 
-#define MAX_NAMED 64
+#define MAX_NAMED 1024
 static FXC_TLS TYPEDEF named_types[MAX_NAMED] ;
 static FXC_TLS int     named_codes[MAX_NAMED] ;
 static FXC_TLS int     named_count = 0 ;

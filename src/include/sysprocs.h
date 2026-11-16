@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG */
+/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG, sonido de DIV, sin FLI, sin paletas, modo 8; 2026-11-16 - SET_SKY_M8 y M8_SIGHT */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -189,11 +189,6 @@ SYSPROC sysprocs[MAX_SYSPROCS] =
     { 0xC3, "STOP_SCROLL"           , "I"     , TYPE_DWORD  , 1 , SYSMACRO(fxi_stop_scroll) },
     { 0xC4, "MOVE_SCROLL"           , "I"     , TYPE_DWORD  , 1 , SYSMACRO(fxi_move_scroll) },
 
-    /* Animaciones FLI */
-    { 0xC5, "START_FLI"             , "SII"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_start_fli) },
-    { 0xC6, "END_FLI"               , ""      , TYPE_DWORD  , 0 , SYSMACRO(fxi_end_fli) },
-    { 0xC7, "FRAME_FLI"             , ""      , TYPE_DWORD  , 0 , SYSMACRO(fxi_frame_fli) },
-    { 0xC8, "RESET_FLI"             , ""      , TYPE_DWORD  , 0 , SYSMACRO(fxi_reset_fli) },
 
     /* Tratamiento de cadenas */
     { 0xD0, "LEN"                   , "S"     , TYPE_DWORD  , 1 , SYSMACRO(fxi_strlen) },
@@ -305,9 +300,6 @@ SYSPROC sysprocs[MAX_SYSPROCS] =
     { 0x161, "FADE"                 , "IIII"  , TYPE_DWORD  , 4 , SYSMACRO(fxi_fade) },
     { 0x162, "FADE_ON"              , ""      , TYPE_DWORD  , 0 , SYSMACRO(fxi_fade_on) },
     { 0x163, "FADE_OFF"             , ""      , TYPE_DWORD  , 0 , SYSMACRO(fxi_fade_off) },
-    { 0x164, "ROLL_PALETTE"         , "III"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_roll_palette) },
-    { 0x165, "CONVERT_PALETTE"      , "IIP"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_convert_palette) },
-    { 0x166, "FIND_COLOR"           , "BBB"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_find_color) },
     { 0x167, "RGB"                  , "BBB"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_rgb) },
     { 0x168, "GET_RGB"              , "IPPP"  , TYPE_DWORD  , 4 , SYSMACRO(fxi_get_rgb) },
 
@@ -352,7 +344,6 @@ SYSPROC sysprocs[MAX_SYSPROCS] =
     { 0x19B, "SET_GLYPH"            , "IIII"  , TYPE_DWORD  , 4 , SYSMACRO(fxi_set_glyph) },
     { 0x19C, "SET_MODE"             , "IIII"  , TYPE_DWORD  , 4 , SYSMACRO(fxi_set_mode_4) },
     { 0x19D, "DRAWING_STIPPLE"      , "I"     , TYPE_DWORD  , 1 , SYSMACRO(fxi_drawing_stipple) },
-    { 0x19E, "SAVE_PAL"             , "S"     , TYPE_DWORD  , 1 , SYSMACRO(fxi_save_pal) },
 
     /* Nuevas funciones en la 0.85 */
     { 0x1A0, "#COPY#"               , "PV++I" , TYPE_POINTER, 5 , SYSMACRO(fxi_copy_struct) },
@@ -391,6 +382,32 @@ SYSPROC sysprocs[MAX_SYSPROCS] =
     { 0x1C2, "SAVE_MAP"             , "IIS"   , TYPE_DWORD  , 3 , SYSMACRO(fxi_save_map) },
     { 0x1C3, "SAVE_FPG"             , "IS"    , TYPE_DWORD  , 2 , SYSMACRO(fxi_save_fpg) },
     { 0x1C4, "SAVE_IMAGE"          , "IISI|,,,0", TYPE_DWORD , 4 , SYSMACRO(fxi_save_image) },
+    { 0x1C5, "LOAD_PCM"           , "SI|,0"  , TYPE_DWORD , 2 , SYSMACRO(fxi_load_pcm) },
+    { 0x1C6, "SOUND"              , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_sound) },
+    { 0x1C7, "STOP_SOUND"         , "I"    , TYPE_DWORD , 1 , SYSMACRO(fxi_stop_sound) },
+    { 0x1C8, "CHANGE_SOUND"       , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_change_sound) },
+    { 0x1C9, "CHANGE_CHANNEL"     , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_change_channel) },
+    { 0x1CA, "IS_PLAYING_SOUND"   , "I"    , TYPE_DWORD , 1 , SYSMACRO(fxi_is_playing_sound) },
+    { 0x1CB, "RESET_SOUND"        , ""     , TYPE_DWORD , 0 , SYSMACRO(fxi_reset_sound) },
+
+    /* Modo 8 */
+    { 0x1CC, "LOAD_WLD"           , "SI|,0" , TYPE_DWORD , 2 , SYSMACRO(fxi_load_wld) },
+    { 0x1CD, "SAVE_WLD"           , "S"    , TYPE_DWORD , 1 , SYSMACRO(fxi_save_wld) },
+    { 0x1CE, "START_MODE8"        , "III|,0,0", TYPE_DWORD , 3 , SYSMACRO(fxi_start_mode8) },
+    { 0x1CF, "STOP_MODE8"         , "I|0"  , TYPE_DWORD , 1 , SYSMACRO(fxi_stop_mode8) },
+    { 0x1D0, "GO_TO_FLAG"         , "I"    , TYPE_DWORD , 1 , SYSMACRO(fxi_go_to_flag) },
+    { 0x1D1, "SET_SECTOR_HEIGHT"  , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_set_sector_height) },
+    { 0x1D2, "GET_SECTOR_HEIGHT"  , "IPP"  , TYPE_DWORD , 3 , SYSMACRO(fxi_get_sector_height) },
+    { 0x1D3, "SET_POINT_M8"       , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_set_point_m8) },
+    { 0x1D4, "GET_POINT_M8"       , "IPP"  , TYPE_DWORD , 3 , SYSMACRO(fxi_get_point_m8) },
+    { 0x1D5, "SET_FOG"            , "II"   , TYPE_DWORD , 2 , SYSMACRO(fxi_set_fog) },
+    { 0x1D6, "SET_SECTOR_TEXTURE" , "IIII" , TYPE_DWORD , 4 , SYSMACRO(fxi_set_sector_texture) },
+    { 0x1D7, "GET_SECTOR_TEXTURE" , "IPPP" , TYPE_DWORD , 4 , SYSMACRO(fxi_get_sector_texture) },
+    { 0x1D8, "SET_WALL_TEXTURE"   , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_set_wall_texture) },
+    { 0x1D9, "GET_WALL_TEXTURE"   , "IPP"  , TYPE_DWORD , 3 , SYSMACRO(fxi_get_wall_texture) },
+    { 0x1DA, "SET_ENV_COLOR"      , "III"  , TYPE_DWORD , 3 , SYSMACRO(fxi_set_env_color) },
+    { 0x1DB, "SET_SKY_M8"         , "IIII|,,3,0", TYPE_DWORD , 4 , SYSMACRO(fxi_set_sky_m8) },
+    { 0x1DC, "M8_SIGHT"           , "II|,0" , TYPE_DWORD , 2 , SYSMACRO(fxi_m8_sight) },
 
     { 0    , 0                      , ""      , 0           , 0 , 0  }
 } ;

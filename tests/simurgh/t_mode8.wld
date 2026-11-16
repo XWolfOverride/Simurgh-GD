@@ -1,0 +1,35 @@
+simurgh-wld 1
+# Mapa de prueba del modo 8: una sala (sector 0), un pasillo con el suelo 24 mas alto (sector 1) y un fondo
+# con el suelo a 100 (sector 2), demasiado alto para subir de un paso.
+scale 1
+# vertex x y
+vertex 0 0
+vertex 400 0
+vertex 400 100
+vertex 400 300
+vertex 400 400
+vertex 0 400
+vertex 700 100
+vertex 700 300
+vertex 900 100
+vertex 900 300
+# sector suelo techo textura_suelo textura_techo luz etiqueta
+sector 0 200 1 2 15 0
+sector 24 150 4 2 15 0
+sector 100 200 1 2 15 7
+# wall vertice1 vertice2 sector_delante sector_detras textura textura_arriba textura_abajo luz etiqueta
+wall 0 1 0 -1 3
+wall 1 2 0 -1 3
+wall 2 3 0 1 0 5 6
+wall 3 4 0 -1 3
+wall 4 5 0 -1 3
+wall 5 0 0 -1 3
+wall 2 6 1 -1 3
+wall 6 7 1 2 0 5 6 15 9
+wall 7 3 1 -1 3
+wall 6 8 2 -1 3
+wall 8 9 2 -1 3
+wall 9 7 2 -1 3
+# flag numero x y
+flag 0 200 200
+flag 1 550 200

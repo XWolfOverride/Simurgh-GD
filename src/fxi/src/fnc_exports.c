@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin background_8bits ni enable_16bits, sin FLI, sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -106,16 +107,8 @@ static symbol default_symbols[] = {
     { "init_c_type"                     , init_c_type                 },
     { "dos_to_win"                      , &dos_to_win                 },
     { "win_to_dos"                      , &win_to_dos                 },
-    { "flic_open"                       , flic_open                   },
-    { "flic_destroy"                    , flic_destroy                },
-    { "flic_do_frame"                   , flic_do_frame               },
-    { "flic_reset"                      , flic_reset                  },
-    { "current_fli"                     , &current_fli                },
-    { "current_fli_x"                   , &current_fli_x              },
-    { "current_fli_y"                   , &current_fli_y              },
     { "debug"                           , &debug                      },
     { "fxi"                             , &fxi                        },
-    { "enable_16bits"                   , &enable_16bits              },
     { "enable_filtering"                , &enable_filtering           },
     { "report_string"                   , &report_string              },
     { "report_graphics"                 , &report_graphics            },
@@ -149,31 +142,14 @@ static symbol default_symbols[] = {
 	{ "gr_draw_screen"                  , gr_draw_screen              },
     { "keytab_init"                     , keytab_init                 },
     { "keytab_free"                     , keytab_free                 },
-    { "vpalette"                        , &vpalette                   },
-    { "palette"                         , &palette                    },
-    { "colorequiv"                      , &colorequiv                 },
     { "colorghost"                      , &colorghost                 },
-    { "background_8bits"                , &background_8bits           },
-    { "background_8bits_used"           , &background_8bits_used      },
     { "background_is_black"             , &background_is_black        },
-    { "trans_table"                     , &trans_table                },
-    { "trans_table_updated"             , &trans_table_updated        },
-    { "gr_make_trans_table"             , gr_make_trans_table         },
-    { "palette_loaded"                  , &palette_loaded             },
-    { "palette_changed"                 , &palette_changed            },
     { "fade_on"                         , &fade_on                    },
 /*    { "fade_step"                       , &fade_step                  },*/
-    { "gr_read_pal"                     , gr_read_pal                 },
-    { "gr_refresh_palette"              , gr_refresh_palette          },
     { "gr_fade_init"                    , gr_fade_init                },
     { "gr_fade_step"                    , gr_fade_step                },
-    { "gr_roll_palette"                 , gr_roll_palette             },
-    { "gr_find_nearest_color"           , gr_find_nearest_color       },
-    { "gr_set_rgb"                      , gr_set_rgb                  },
     { "gr_rgb"                          , gr_rgb                      },
     { "gr_get_rgb"                      , gr_get_rgb                  },
-    { "gr_set_colors"                   , gr_set_colors               },
-    { "gr_get_colors"                   , gr_get_colors               },
     { "blend_create"                    , blend_create                },
     { "blend_free"                      , blend_free                  },
     { "blend_init"                      , blend_init                  },
@@ -188,8 +164,6 @@ static symbol default_symbols[] = {
     { "gr_load_png"                     , gr_load_png                 },
     { "gr_load_pcx"                     , gr_load_pcx                 },
     { "gr_load_fpg"                     , gr_load_fpg                 },
-    { "gr_load_pal"                     , gr_load_pal                 },
-    { "gr_save_pal"                     , gr_save_pal                 },
 	{ "gr_save_png"						, gr_save_png				  },
     { "grlib_new"                       , grlib_new                   },
     { "grlib_destroy"                   , grlib_destroy               },
@@ -329,9 +303,7 @@ static symbol default_symbols[] = {
 
 	/* Drawing */
 	DAT( syscolor16 ),
-	DAT( syscolor8 ),
 	DAT( fntcolor16 ),
-	DAT( fntcolor8 ),
 	FNC( gr_setalpha ),
 	FNC( gr_bezier ),
 	FNC( gr_drawing_new ),
@@ -341,12 +313,9 @@ static symbol default_symbols[] = {
 	DAT( frame_count ),
 
 	/* Palette */
-	DAT( nearest_table ),
-	FNC( gr_fill_nearest_table ),
 
 	/* Low-level conversion/alpha */
 	FNC( gr_alpha16 ),
-	FNC( gr_alpha8 ),
 
 	/* Profiler */
 	FNC(gprof_init),

@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - sin dependencia de SDL (simtypes.h) */
+/* Simurgh: modificado 2026-11-15 - sin dependencia de SDL (simtypes.h), directiva //$ancient, alias solo con //$ancient on */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -146,6 +146,9 @@ SYSPROC ;
 
 extern int         sysproc_add    (char * name, char * paramtypes, int type, void * func);
 extern SYSPROC *   sysproc_get    (int id) ;
+extern int         sysproc_is_ancient (const char * name) ;
+extern const char * sysproc_alias_target (const char * name) ;
+extern FXC_TLS int fxc_ancient ;
 extern SYSPROC * * sysproc_getall (int id) ;
 extern char    *   sysproc_name   (int code) ;
 

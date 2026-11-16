@@ -3,9 +3,6 @@
 process FPGBox(String dir,fil);
 private nfpg,i,ll,l,maxi,bar,mapsel,mp,gx,gy,color,csel,gyy,man,mal,por,amapsel,zMapSel;
         string s,Rinfo;
-        struct Paleta[256]
-         byte r,g,b;
-        end;
         awinsel,mapas,last=1,depth=0;
         String Menu="Nombre
 N£mero
@@ -27,10 +24,8 @@ y=rand(50,200);
 UpIt(id);
 for(alpha=0;alpha<255;alpha+=16);frame;end;alpha=255;
 hint=dir+fil;
-icon=104;msg=1;
-load_pal(hint);
+icon=104;msg=MSG_REDRAW;
 nfpg=Load_fpg(hint);
-get_colors(0,255,&paleta);
 bar=AddVBar(dc,278,-1,212);
 For (mapas=i=0;i<1000;i++)
  if (map_exists(nfpg,i))
@@ -42,9 +37,6 @@ For (mapas=i=0;i<1000;i++)
 end;
 Bar.hitag=(mapas / 4)-2;
 loop
-If (Msg==3)
- set_colors(0,255,&paleta);
-end;
 aWinsel=Winsel;
 if (Winsel==id)
  if (incuadre(mouse.x,mouse.y,x+5,y+12,an-24,al-24))
@@ -71,7 +63,7 @@ if (Winsel==id)
      Case 1,2: // N£mero , Duplicar
       Tag=InputBox("Mapa: "+Map_Name(nfpg,zMapSel),"N£mero del mapa",zMapSel);frame;
       tag=atoi(tag.hint);
-      If (Tag>=0 and tag<1000)
+      If (Tag>0 and tag<1000)
        If (Map_Exists(nfpg,tag))
         Lotag=SiNoBox("Mapa: "+map_name(nfpg,zmapsel),"El mapa ya exsiste ¨Sobrescribir?");frame;
         Hitag=lotag.tag;
@@ -101,7 +93,7 @@ if (Winsel==id)
     end; 
     Bar.hitag=(mapas/4)-2;
     If (Bar.tag>bar.hitag) bar.tag=bar.hitag;end;
-    Msg=1;
+    Msg=MSG_REDRAW;
     Save_fpg(nfpg,hint);
    end; // zMapSel>=0 
   end;
@@ -109,20 +101,20 @@ if (Winsel==id)
 end;
 
 if (amapsel<>Mapsel)
- msg=1;
+ msg=MSG_REDRAW;
  amapsel=mapsel;
 end;
 
-if (msg==2)
+if (msg==MSG_CLICK)
  if (tag==1)
   break;
  end;
  if (tag=bar)
-  msg=1;
+  msg=MSG_REDRAW;
  end;
 end;
-If (msg==5)
- If (Drag.msg==2 and Drag.control<>id)
+If (msg==MSG_DROP)
+ If (Drag.msg==DRAG_MAP and Drag.control<>id)
   l=last;
   while (map_exists(nfpg,l)) l++;end;
   tag=InputBox("A¤adir mapa al fpg","N£mero del mapa:",l);frame;
@@ -137,7 +129,7 @@ If (msg==5)
    End; // exists
    If (HiTag)
     Fpg_add(nfpg,tag,Drag.hitag,Drag.tag);
-    msg=1;mapas++;
+    msg=MSG_REDRAW;mapas++;
     Save_fpg(nfpg,hint);
     bar.hitag=(mapas/4)-2;
     last=tag;
@@ -146,8 +138,8 @@ If (msg==5)
    MessageBox("Error:","Rango entre 1 y 999");Frame;
   End; // tag en el rango
  End; // DragInfo==2
-End; //msg=5
-if (msg==1)
+End; //msg=MSG_DROP
+if (msg==MSG_REDRAW)
  Unload_map(0,graph);
  Drawing_map(0,dc);
  Drawing_color(cBack);
@@ -183,7 +175,7 @@ if (msg==1)
      zMapSel=i;
      if (towinsel==id and !Drag.dc)
       Drag.Control=id;
-      Drag.msg=2;
+      Drag.msg=DRAG_MAP;
       Drag.tag=i;
       Drag.hitag=nfpg;
       Drag.hint=Map_Name(Nfpg,i);
@@ -207,7 +199,7 @@ end;
 winproc();
 frame;
 end;
-msg=256;
+msg=MSG_CLOSING;
 for (;alpha>0;alpha-=16);Frame;end;
 Unload_map(0,graph);
 Unload_map(0,dc);

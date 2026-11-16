@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - manejadores de musica y sonido por registro (ids), no punteros; un unico cierre del fichero */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -75,12 +76,10 @@ static int SDLCALL fenix_write(SDL_RWops *context, const void *ptr, int size, in
 	return(ret);
 }
 
+/* SDL_mixer puede cerrar el SDL_RWops una vez, varias o ninguna segun la version y el camino (en un WAV danado se cerraba dos
+ * veces y corrompia la memoria). Por eso aqui no se libera nada: quien lo crea (load_song, load_wav) lo cierra una sola vez. */
 static int SDLCALL fenix_close(SDL_RWops *context)
 {
-	if ( context ) {
-	    file_close(context->hidden.unknown.data1);
-		SDL_FreeRW(context);
-	}
 	return(0);
 }
 
@@ -98,6 +97,74 @@ SDL_RWops *SDL_RWFromFenixFP(file *fp)
 		rwops->hidden.unknown.data1 = fp;
 	}
 	return(rwops);
+}
+
+/* ------------------------------------- */
+/* Registro de musicas y sonidos         */
+/* ------------------------------------- */
+
+/* Los manejadores que ve el programa son numeros pequenos (1, 2, 3...) y no punteros: una descarga repetida o un numero que no
+ * existe dan -1 en vez de liberar dos veces la misma memoria. Los numeros no se reutilizan. */
+
+typedef struct { int id ; Mix_Music * music ; file * fp ; SDL_RWops * rw ; } SONGREC ;
+typedef struct { int id ; Mix_Chunk * chunk ; int loop ; } WAVREC ;
+
+static SONGREC * songs = NULL ;
+static int song_count = 0, song_alloc = 0, song_next = 1 ;
+static WAVREC  * wavs = NULL ;
+static int wav_count = 0, wav_alloc = 0, wav_next = 1 ;
+
+static int song_add (Mix_Music * music, file * fp, SDL_RWops * rw)
+{
+	if (song_count == song_alloc) {
+		SONGREC * n = (SONGREC *) realloc (songs, sizeof(SONGREC) * (song_alloc + 16)) ;
+		if (!n) return -1 ;
+		songs = n ;
+		song_alloc += 16 ;
+	}
+	songs[song_count].id = song_next ;
+	songs[song_count].music = music ;
+	songs[song_count].fp = fp ;
+	songs[song_count].rw = rw ;
+	song_count++ ;
+	return song_next++ ;
+}
+
+static SONGREC * song_find (int id)
+{
+	int n ;
+	for (n = 0 ; n < song_count ; n++)
+		if (songs[n].id == id) return &songs[n] ;
+	return NULL ;
+}
+
+static int wav_add (Mix_Chunk * chunk)
+{
+	if (wav_count == wav_alloc) {
+		WAVREC * n = (WAVREC *) realloc (wavs, sizeof(WAVREC) * (wav_alloc + 16)) ;
+		if (!n) return -1 ;
+		wavs = n ;
+		wav_alloc += 16 ;
+	}
+	wavs[wav_count].id = wav_next ;
+	wavs[wav_count].chunk = chunk ;
+	wavs[wav_count].loop = 0 ;
+	wav_count++ ;
+	return wav_next++ ;
+}
+
+static WAVREC * wav_rec (int id)
+{
+	int n ;
+	for (n = 0 ; n < wav_count ; n++)
+		if (wavs[n].id == id) return &wavs[n] ;
+	return NULL ;
+}
+
+static Mix_Chunk * wav_find (int id)
+{
+	WAVREC * r = wav_rec (id) ;
+	return r ? r->chunk : NULL ;
 }
 
 
@@ -226,6 +293,8 @@ int load_song (const char * filename)
 {
 	Mix_Music *music = NULL;
 	file      *fp;
+	SDL_RWops *rw;
+	int        id;
 
 	if (audio_initialized == 0)
 		sound_init();
@@ -235,15 +304,28 @@ int load_song (const char * filename)
     if (!fp)
         return (-1);
 
-    music = Mix_LoadMUS_RW(SDL_RWFromFenixFP(fp));
+    rw = SDL_RWFromFenixFP(fp);
+    if (!rw) {
+        file_close(fp);
+        return (-1);
+    }
+
+    music = Mix_LoadMUS_RW(rw);
 
 	if ( music == NULL ) {
-	    file_close(fp);
 		gr_con_printf("Couldn't load %s: %s\n",filename, SDL_GetError());
+		SDL_FreeRW(rw);
+	    file_close(fp);
 		return(-1);
-	} else {
-		return ((int)music);
 	}
+
+	id = song_add (music, fp, rw);
+	if (id < 0) {
+		Mix_FreeMusic(music);
+		SDL_FreeRW(rw);
+	    file_close(fp);
+	}
+	return (id);
 
 }
 
@@ -267,6 +349,8 @@ int load_song (const char * filename)
 
 int play_song (int id, int loops)
 {
+	SONGREC * song;
+
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0)
@@ -275,8 +359,8 @@ int play_song (int id, int loops)
 		return (-1);
 	}
 
-	if (((Mix_Music *)id!=NULL)){
-		int result = Mix_PlayMusic((Mix_Music *)id,loops);
+	if ((song = song_find(id)) != NULL){
+		int result = Mix_PlayMusic(song->music,loops);
 		if (result == -1) {
 			gr_error ("%s", Mix_GetError());
 		}
@@ -309,12 +393,14 @@ int play_song (int id, int loops)
 
 int fade_music_in (int id, int loops, int ms)
 {
+	SONGREC * song;
+
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0) return (-1);
 
-	if (((Mix_Music *)id!=NULL)){
-		return(Mix_FadeInMusic((Mix_Music *)id,loops, ms));
+	if ((song = song_find(id)) != NULL){
+		return(Mix_FadeInMusic(song->music,loops, ms));
 	} else {
 		return(-1);
 	}
@@ -364,12 +450,19 @@ int fade_music_off (int ms)
 
 int unload_song (int id)
 {
+	SONGREC * song;
+
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0) return (-1);
 
-	if ((Mix_Music *)id!=NULL) {
-		Mix_FreeMusic((Mix_Music *)id);
+	song = song_find(id);
+	if (song != NULL) {
+		/* Se libera la musica y despues el fichero y el SDL_RWops, una sola vez */
+		Mix_FreeMusic(song->music);
+		SDL_FreeRW(song->rw);
+		file_close(song->fp);
+		*song = songs[--song_count];
 		return (0) ;
 	} else {
 		return (-1);
@@ -563,6 +656,8 @@ int load_wav (const char * filename)
 {
 	Mix_Chunk *music = NULL;
 	file      *fp;
+	SDL_RWops *rw;
+	int        id;
 
 	if (audio_initialized == 0)
 		sound_init();
@@ -572,14 +667,25 @@ int load_wav (const char * filename)
     if (!fp)
         return (-1);
 
-	music = Mix_LoadWAV_RW(SDL_RWFromFenixFP(fp),1);
+	rw = SDL_RWFromFenixFP(fp);
+	if (!rw) {
+		file_close(fp);
+		return (-1);
+	}
+
+	/* freesrc = 0: el fichero se cierra aqui, una sola vez, tenga o no exito la carga (el sonido queda entero en memoria) */
+	music = Mix_LoadWAV_RW(rw,0);
+	SDL_FreeRW(rw);
+	file_close(fp);
 
 	if ( music == NULL ) {
  		gr_con_printf("Couldn't load %s: %s\n",filename, SDL_GetError());
-		return(0);
-	} else {
-		return ((int)music);
+		return(-1);
 	}
+
+	id = wav_add (music);
+	if (id < 0) Mix_FreeChunk(music);
+	return (id);
 
 }
 
@@ -605,13 +711,14 @@ int load_wav (const char * filename)
 int play_wav (int id, int loops, int channel)
 {
 	int canal;
+	Mix_Chunk * chunk;
 
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0) return (-1);
 
-	if ((Mix_Chunk *)id!=NULL) {
-		canal=Mix_PlayChannel(channel,(Mix_Chunk *)id,loops);
+	if ((chunk = wav_find(id)) != NULL) {
+		canal=Mix_PlayChannel(channel,chunk,loops);
 		return(canal);
 	}
 	else {
@@ -642,12 +749,18 @@ int play_wav (int id, int loops, int channel)
 
 int unload_wav (int id)
 {
+	Mix_Chunk * chunk;
+
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0) return (-1);
 
-	if ((Mix_Chunk *)id!=NULL) {
-		Mix_FreeChunk((Mix_Chunk *)id);
+	chunk = wav_find(id);
+	if (chunk != NULL) {
+		int n ;
+		Mix_FreeChunk(chunk);
+		for (n = 0 ; n < wav_count ; n++)
+			if (wavs[n].id == id) { wavs[n] = wavs[--wav_count] ; break ; }
 		return (0) ;
 	} else return (-1);
 
@@ -795,6 +908,8 @@ int is_playing_wav(int canal)
 
 int	 set_wav_volume	(int sample,int volume)
 {
+	Mix_Chunk * chunk;
+
 	if (audio_initialized == 0)
 		sound_init();
 	if (sound_active==0) return (-1);
@@ -802,8 +917,9 @@ int	 set_wav_volume	(int sample,int volume)
 	if (volume<0) volume=0;
 	if (volume>128) volume=128;
 
-	if ((Mix_Chunk *)sample!=NULL)
-		return(Mix_VolumeChunk((Mix_Chunk *)sample,volume));
+	chunk = wav_find(sample);
+	if (chunk != NULL)
+		return(Mix_VolumeChunk(chunk,volume));
 	else
 		return -1 ;
 }
@@ -986,4 +1102,89 @@ int reverse_stereo(int canal, int flip)
 	}
 
 	return (-1) ;
+}
+
+
+/* ------------------------------------- */
+/* Funciones de sonido de DIV            */
+/* ------------------------------------- */
+
+/* load_pcm / sound / stop_sound / change_sound / change_channel / is_playing_sound / reset_sound, como en DIV: el volumen va de 0 a
+ * 511 (256 es el normal; SDL_mixer solo llega a 128, asi que no se amplifica por encima), la frecuencia (256 normal) se acepta y se
+ * ignora (SDL_mixer no cambia la frecuencia de un sonido que ya suena) y el paneo va de 0 (izquierda) a 255 (derecha). */
+
+static int div_volume (int v)
+{
+	if (v < 0) v = 0;
+	if (v > 511) v = 511;
+	v = v * 128 / 256;
+	return v > 128 ? 128 : v;
+}
+
+int load_pcm (const char * filename, int loop)
+{
+	int id = load_wav (filename);
+	WAVREC * r = (id > 0) ? wav_rec (id) : NULL;
+
+	if (r) r->loop = loop ? 1 : 0;
+	return id;
+}
+
+int sound_div (int id, int volume, int frequency)
+{
+	WAVREC * r;
+	int canal;
+
+	if (audio_initialized == 0)
+		sound_init();
+	if (sound_active==0) return (-1);
+
+	r = wav_rec (id);
+	if (!r) return (-1);
+
+	canal = Mix_PlayChannel (-1, r->chunk, r->loop ? -1 : 0);
+	if (canal >= 0)
+		Mix_Volume (canal, div_volume (volume));
+	return canal;
+}
+
+int stop_sound_div (int canal)
+{
+	if (audio_initialized == 0)
+		sound_init();
+	if (sound_active==0) return (-1);
+
+	Mix_HaltChannel (canal < 0 ? -1 : canal);      /* -1 = todos los canales */
+	return 0;
+}
+
+int change_sound_div (int canal, int volume, int frequency)
+{
+	if (audio_initialized == 0)
+		sound_init();
+	if (sound_active==0 || canal < 0) return (-1);
+
+	Mix_Volume (canal, div_volume (volume));
+	return 0;
+}
+
+int change_channel_div (int canal, int volume, int pan)
+{
+	if (audio_initialized == 0)
+		sound_init();
+	if (sound_active==0 || canal < 0) return (-1);
+
+	if (pan < 0) pan = 0;
+	if (pan > 255) pan = 255;
+	Mix_Volume (canal, div_volume (volume));
+	Mix_SetPanning (canal, (Uint8)(255 - pan), (Uint8)pan);
+	return 0;
+}
+
+int is_playing_sound_div (int canal)
+{
+	if (audio_initialized == 0)
+		sound_init();
+	if (sound_active==0 || canal < 0) return (0);
+	return Mix_Playing (canal);
 }

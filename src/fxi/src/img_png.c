@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - compatible con libpng 1.5 o posterior (png_jmpbuf; sin acceso a campos opacos) */
+/* Simurgh: modificado 2026-11-15 - compatible con libpng 1.5 o posterior (png_jmpbuf; sin acceso a campos opacos), sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -138,31 +138,27 @@ GRAPH * gr_read_png (const char * filename)
     /* Recupera el fichero, convirtiendo a 16 bits si es preciso */
 
     rowbytes = png_get_rowbytes (png_ptr, info_ptr) ;
+    unsigned char pngpal[768] ;
+    int have_pal = 0 ;
     bitmap = bitmap_new (0, width, height, color == PNG_COLOR_TYPE_PALETTE ? 8 : 16, 1) ;
     if (!bitmap) gr_error ("Error al cargar PNG") ;
     if (color == PNG_COLOR_TYPE_PALETTE)
     {
         /* Read the color palette */
 
-        if (!palette_loaded)
         {
-            png_colorp png_palette = (png_colorp) png_malloc (png_ptr, 256*sizeof(png_color)) ;
-            if (!png_palette)
-                gr_error ("Sin memoria") ;
-            else
+            png_colorp png_palette = NULL ;
+            int ncolors = 0 ;
+            if (png_get_PLTE (png_ptr, info_ptr, &png_palette, &ncolors) && png_palette)
             {
-                png_get_PLTE (png_ptr, info_ptr, &png_palette, &n) ;
-
-                for (n-- ; n <= 255 ; n--)
+                for (n = 0 ; n < ncolors && n < 256 ; n++)
                 {
-                    palette[n].r = png_palette[n].red;
-                    palette[n].g = png_palette[n].green;
-                    palette[n].b = png_palette[n].blue;
+                    pngpal[n*3]   = png_palette[n].red ;
+                    pngpal[n*3+1] = png_palette[n].green ;
+                    pngpal[n*3+2] = png_palette[n].blue ;
                 }
+                have_pal = 1 ;
             }
-
-            palette_loaded = 1 ;
-            palette_changed = 1 ;
         }
 
         for (n = 0 ; n < height ; n++)
@@ -303,7 +299,7 @@ GRAPH * gr_read_png (const char * filename)
     free ( row ) ;
     free ( rowpointers ) ;
 
-    return bitmap ;
+    return bitmap_adapt16 (bitmap, have_pal ? pngpal : NULL) ;   /* un PNG con paleta se adapta a 16 bits al cargarlo */
 }
 
 /*
@@ -369,43 +365,6 @@ int gr_save_png (GRAPH * gr, const char * filename)
 
     /* NOTE: NO SUPPORT FOR ANIMATIONS! */
 
-    if (gr->depth == 8)
-    {
-        /* 8 bits PNG file */
-        png_set_IHDR (png_ptr, info_ptr, gr->width,
-                      gr->height, 8, PNG_COLOR_TYPE_PALETTE,
-                      PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
-                      PNG_FILTER_TYPE_BASE) ;
-
-        pal = (png_colorp) png_malloc (png_ptr, 256*sizeof(png_color)) ;
-        if (!pal)
-        {
-            fclose (file) ;
-            png_destroy_write_struct (&png_ptr, NULL) ;
-            free ( rowpointers ) ;
-            return(0) ;
-        }
-
-        /* Generate palette info */
-        for (k = 0 ; k < 256 ; k++)
-        {
-            pal[k].red   = palette[k].r ;
-            pal[k].green = palette[k].g ;
-            pal[k].blue  = palette[k].b ;
-        }
-        png_set_PLTE (png_ptr, info_ptr, pal, 256) ;
-        png_write_info (png_ptr, info_ptr) ;
-
-        /* no need to rearrange data */
-        for (k = 0 ; k < (unsigned)gr->height ; k++)
-            rowpointers[k] = (Uint8 *)gr->data + gr->pitch*k ;
-        png_write_image (png_ptr, rowpointers) ;
-
-        /* Free allocated palette... */
-        png_free (png_ptr, (png_voidp) pal) ;
-        /* palette: campo opaco en libpng 1.5 o posterior */
-    }
-    else
     {
         png_set_IHDR (png_ptr, info_ptr, gr->width,
                       gr->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,

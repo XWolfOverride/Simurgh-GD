@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG */
+/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG, UNLOAD_MAP con codigo no valido, sonido de DIV, GET_ID sin devolver al proceso que llama, adaptacion a 16 bits al cargar, sin fondo de 8 bits, sin FLI, sin paletas, collision por tipo de coordenadas y con radius en el modo 7, modo 8; 2026-11-16 - procesos solidos (solid) en collision(), SET_SKY_M8 y M8_SIGHT */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -502,7 +502,7 @@ static int fxi_get_id (INSTANCE * my, int * params)
         }
         while (ptr)
         {
-            if ((LOCDWORD(ptr, STATUS) & ~STATUS_WAITING_MASK) >= STATUS_RUNNING)
+            if (ptr != my && (LOCDWORD(ptr, STATUS) & ~STATUS_WAITING_MASK) >= STATUS_RUNNING)
             {
                 LOCDWORD(my,ID_SCAN) = LOCDWORD(ptr, PROCESS_ID) ;
                 return LOCDWORD(ptr, PROCESS_ID) ;
@@ -516,14 +516,14 @@ static int fxi_get_id (INSTANCE * my, int * params)
     if (LOCDWORD(my,TYPE_SCAN))
     {
         ptr = instance_get (LOCDWORD(my,TYPE_SCAN)) ;
-        if (LOCDWORD(ptr,PROCESS_TYPE) != params[0])
+        if (!ptr || LOCDWORD(ptr,PROCESS_TYPE) != params[0])
             ptr = first_instance ;
         else if (ptr)
             ptr = ptr->next ;
     }
     while (ptr)
     {
-        if (LOCDWORD(ptr,PROCESS_TYPE) == params[0])
+        if (ptr != my && LOCDWORD(ptr,PROCESS_TYPE) == params[0])     /* como en DIV, nunca devuelve al propio proceso */
         {
             if ((LOCDWORD(ptr, STATUS) & ~STATUS_WAITING_MASK) >= STATUS_RUNNING)
             {
@@ -765,7 +765,7 @@ static int check_collision_with_mouse (INSTANCE * proc1)
     /* Creates a temporary bitmap (only once) */
 
     if (!bmp)
-        bmp = bitmap_new (0, 2, 2, enable_16bits ? 16:8, 1) ;
+        bmp = bitmap_new (0, 2, 2, 16, 1) ;
     if (!bmp)
         return 0 ;
     memset (bmp->data, 0, 2) ;
@@ -804,12 +804,23 @@ static int check_collision_with_mouse (INSTANCE * proc1)
     return enable_16bits ? *(Uint16 *)bmp->data : *(Uint8 *)bmp->data ;
 }
 
+/* Colision en los modos 3D (modos 7 y 8): esta en g_mode8.c (gr_collision_3d), junto con los procesos solidos. Sin solidos son
+ * dos esferas: hay colision si la distancia entre los dos procesos, contando la altura (z), es menor que la suma de sus radios. */
+static int check_collision_3d (INSTANCE * proc1, INSTANCE * proc2)
+{
+    return gr_collision_3d (proc1, proc2) ;
+}
+
 static int check_collision (INSTANCE * proc1, INSTANCE * proc2)
 {
     REGION bbox1, bbox2 ;
     int x, y, w, h ;
     GRAPH * bmp, * bmp2 ;
     int depth ;
+
+    /* Solo colisionan procesos del mismo tipo de coordenadas (pantalla, scroll, modo 7...) */
+    if (LOCDWORD(proc1,CTYPE) != LOCDWORD(proc2,CTYPE)) return 0 ;
+    if (LOCDWORD(proc1,CTYPE) >= 2) return check_collision_3d (proc1, proc2) ;
 
     if (!get_bbox (&bbox1, proc1)) return 0 ;
     if (!get_bbox (&bbox2, proc2)) return 0 ;
@@ -824,7 +835,7 @@ static int check_collision (INSTANCE * proc1, INSTANCE * proc2)
     bbox2.x2 = w-1 ;
     bbox2.y2 = h-1 ;
 
-    depth = (enable_16bits ? 16:8) ;
+    depth = (16) ;
     bmp = bitmap_new (0, w, h, depth, 1) ;
     // Splinter (jj_arg@yahoo.com) 06/11/07 08:48pm
     if (!bmp) return 0;
@@ -1090,6 +1101,10 @@ static int fxi_unload_map (INSTANCE * my, int * params)
 {
     GRAPH * map ;
 
+    /* (0,0) seria el fondo de pantalla y (0,-1) la pantalla: no son mapas que se puedan descargar, y un codigo 0 casi siempre es un mapa
+       que no se pudo crear (p. ej. write_in_map con texto vacio), asi que se avisa en vez de callar */
+    if (params[1] <= 0) gr_error ("unload_map: codigo de mapa no valido (%d, %d)", params[0], params[1]) ;
+
     map = bitmap_get (params[0], params[1]) ;
     if (!map) return 0 ;
     grlib_unload_map (params[0], params[1]) ;
@@ -1142,66 +1157,22 @@ static int fxi_out_region (INSTANCE * my, int * params)
     return region_is_out (&regions[region], &bbox) ;
 }
 
-/* Paleta de colores */
+/* Paleta de colores: ya no hay paleta. Estas tres funciones solo se pueden usar con //$ancient on y no hacen nada: los graficos
+ * de 8 bits se convierten a 16 al cargarlos con la paleta de su propio fichero. */
 
 static int fxi_load_pal (INSTANCE * my, int * params)
 {
-    const char * palname = string_get (params[0]) ;
-    int r = palname ? gr_load_pal(palname) : 0 ;
     string_discard (params[0]) ;
-    return r ;
-}
-
-static int fxi_save_pal (INSTANCE * my, int * params)
-{
-    const char * palname = string_get(params[0]);
-    int r = palname ? gr_save_pal(palname) : 0;
-    string_discard(params[0]);
-    return r;
-}
-
-static int fxi_convert_palette (INSTANCE * my, int * params)
-{
-    GRAPH * map = bitmap_get (params[0], params[1]) ;
-    int * newpal = (int *) params[2];
-    Uint32 x, y ;
-    Uint8 * orig, * ptr ;
-
-    if (!map) return -1 ;
-    if (map->depth != 8)
-    {
-        gr_error ("Intento de usar convert_palette con un gráfico de 16 bits") ;
-        return 0;
-    }
-
-    orig = (Uint8 *)map->data_start ;
-    for (y = 0 ; y < map->height * map->frames; y++)
-    {
-        ptr = orig + map->pitch * y ;
-        for (x = 0 ; x < map->width ; x++, ptr++)
-            *ptr = newpal[*ptr] ;
-    }
-    map->modified = 1;
     return 1 ;
 }
 
 static int fxi_set_colors (INSTANCE * my, int * params)
 {
-    if (!scr_initialized) gr_init (320, 200) ;
-    gr_set_colors (params[0], params[1], (Uint8 *)params[2]) ;
     return 1 ;
 }
 
 static int fxi_get_colors (INSTANCE * my, int * params)
 {
-    if (!scr_initialized) gr_init (320, 200) ;
-    gr_get_colors (params[0], params[1], (Uint8 *)params[2]) ;
-    return 1 ;
-}
-
-static int fxi_roll_palette (INSTANCE * my, int * params)
-{
-    gr_roll_palette (params[0], params[1], params[2]) ;
     return 1 ;
 }
 
@@ -1233,12 +1204,6 @@ static int fxi_fade_off (INSTANCE * my, int * params)
     return 1;
 }
 
-static int fxi_find_color (INSTANCE * my, int * params)
-{
-    if (!scr_initialized) gr_init (320, 200) ;
-    return gr_find_nearest_color (params[0], params[1], params[2]) ;
-}
-
 static int fxi_get_rgb (INSTANCE * my, int * params)
 {
     if (!scr_initialized) gr_init (320, 200) ;
@@ -1249,8 +1214,7 @@ static int fxi_get_rgb (INSTANCE * my, int * params)
 static int fxi_rgb (INSTANCE * my, int * params)
 {
     if (!scr_initialized) gr_init (320, 200) ;
-    return enable_16bits ? gr_rgb (params[0], params[1], params[2]) :
-        gr_find_nearest_color (params[0], params[1], params[2]) ;
+    return gr_rgb (params[0], params[1], params[2]) ;
 }
 
 extern int fade_step ;
@@ -1335,7 +1299,7 @@ static int fxi_drawing_map (INSTANCE * my, int * params)
     if (!scr_initialized) gr_init (320, 200) ;
     if (params[0] == 0 && params[1] == 0)
     {
-        drawing_graph = (enable_16bits && background_8bits_used) ? background_8bits : background ;
+        drawing_graph = background ;
         background_is_black = 0 ;
     }
     else
@@ -1520,10 +1484,7 @@ static int fxi_get_pixel (INSTANCE * my, int * params)
 {
     if (!scr_initialized) gr_init (320, 200) ;
 
-    if (enable_16bits && background_8bits_used)
-        return gr_get_pixel (background_8bits, params[0], params[1]) ;
-    else
-        return gr_get_pixel (background, params[0], params[1]) ;
+    return gr_get_pixel (background, params[0], params[1]) ;
 }
 
 static int fxi_graphic_set (INSTANCE * my, int * params)
@@ -1552,8 +1513,6 @@ static int fxi_graphic_info (INSTANCE * my, int * params)
 
     if (params[0] || params[1])
         map = bitmap_get (params[0], params[1]) ;
-    else if (enable_16bits && background_8bits_used)
-        map = background_8bits ;
     else
         map = background ;
 
@@ -1594,15 +1553,7 @@ static int fxi_put (INSTANCE * my, int * params)
     if (!map) return 0 ;
     if (!scr_initialized) gr_init (320, 200) ;
 
-    if (enable_16bits && (background_is_black || background_8bits_used) && map->depth == 8) {
-        background_8bits_used = 1 ;
-        gr_blit (background_8bits, 0, params[2], params[3], 0, map) ;
-    } else if (enable_16bits && background_8bits_used && map->depth == 16) {
-        background_8bits_used = 0;
-        gr_blit (background, 0, 0, 0, 0, background_8bits);
-        gr_blit (background, 0, params[2], params[3], 0, map) ;
-    } else
-        gr_blit (background, 0, params[2], params[3], 0, map) ;
+    gr_blit (background, 0, params[2], params[3], 0, map) ;
 
     background_is_black = 0 ;
     return 1 ;
@@ -1619,12 +1570,6 @@ static int fxi_xput (INSTANCE * my, int * params)
     if (r < 0 || r > 31) r = 0 ;
 
     background_is_black = 0 ;
-
-    if (enable_16bits && background_8bits_used)
-    {
-        gr_blit (background, 0, 0, 0, 0, background_8bits);
-        background_8bits_used = 0;
-    }
 
     if (params[4] == 0 && params[5] == 100)
     {
@@ -1649,15 +1594,7 @@ static int fxi_put_screen (INSTANCE * my, int * params)
 
     if (!scr_initialized) gr_init (320, 200) ;
 
-    if (enable_16bits && map->depth == 8)
-    {
-        background_8bits_used = 1 ;
-        bg = background_8bits;
-    }
-    else
-    {
-        bg = background;
-    }
+    bg = background;
 
     x = bg->width/2;
     y = bg->height/2;
@@ -1678,10 +1615,7 @@ static int fxi_put_pixel (INSTANCE * my, int * params)
 {
     if (!scr_initialized) gr_init (320, 200) ;
 
-    if (enable_16bits && background_8bits_used)
-        gr_put_pixel (background_8bits, params[0], params[1], params[2]) ;
-    else
-        gr_put_pixel (background, params[0], params[1], params[2]) ;
+    gr_put_pixel (background, params[0], params[1], params[2]) ;
     background_is_black = 0 ;
     return 1 ;
 }
@@ -1691,11 +1625,6 @@ static int fxi_clear_screen (INSTANCE * my, int * params)
     if (!scr_initialized) gr_init (320, 200) ;
     gr_clear (background) ;
 
-    if (enable_16bits && background_8bits_used)
-    {
-        gr_clear (background_8bits) ;
-        background_8bits_used = 0 ;
-    }
     background_is_black = 1 ;
     background_dirty = 1 ;
     return 1 ;
@@ -1710,13 +1639,10 @@ static int fxi_map_buffer (INSTANCE * my, int * params)
     else
     {
         background_is_black = 0 ;
-        if (enable_16bits && background_8bits_used)
-            map = background_8bits ;
-        else
         {
             if (!background)
             {
-                background = bitmap_new (0, scr_width, scr_height, enable_16bits ? 16:8, 1) ;
+                background = bitmap_new (0, scr_width, scr_height, 16, 1) ;
                 assert (background) ;
                 gr_clear (background) ;
                 bitmap_add_cpoint (background, 0, 0) ;
@@ -1739,7 +1665,7 @@ static int fxi_new_map (INSTANCE * my, int * params)
 {
     GRAPH * map ;
     if (!scr_initialized) gr_init (320, 200) ;
-    map = bitmap_new_syslib (params[0], params[1], params[2], 1) ;
+    map = bitmap_new_syslib (params[0], params[1], params[2] == 8 ? 16 : params[2], 1) ;    /* un mapa de 8 bits se crea de 16 */
     if (map) gr_clear (map);
     return map ? map->code : 0 ;
 }
@@ -1748,7 +1674,7 @@ static int fxi_get_screen (INSTANCE * my, int * params)
 {
     GRAPH * map ;
     if (!scr_initialized) gr_init (320, 200) ;
-    map = bitmap_new_syslib (scr_width, scr_height, enable_16bits ? 16:8, 1) ;
+    map = bitmap_new_syslib (scr_width, scr_height, 16, 1) ;
     if (map)
     {
         gr_draw_screen (map, 1, 1);
@@ -1889,8 +1815,6 @@ static int fxi_map_block_copy (INSTANCE * my, int * params)
         if (!params[4])
         {
             orig = background ;
-            if (enable_16bits && background_8bits_used)
-                orig = background_8bits ;
         }
         else
             gr_error ("Mapa %d no disponible en el fichero %d",
@@ -2875,6 +2799,47 @@ static int fxi_is_playing_wav(INSTANCE * my, int * params) {
     return (is_playing_wav(params[0]));
 }
 
+/* Funciones de sonido de DIV (volumen 0-511, frecuencia 256 normal) */
+
+static int fxi_load_pcm (INSTANCE * my, int * params)
+{
+    int r = -1 ;
+    const char * filename = string_get (params[0]) ;
+    if (filename) r = load_pcm (filename, params[1]) ;
+    string_discard (params[0]) ;
+    return r ;
+}
+
+static int fxi_sound (INSTANCE * my, int * params)
+{
+    return sound_div (params[0], params[1], params[2]) ;
+}
+
+static int fxi_stop_sound (INSTANCE * my, int * params)
+{
+    return stop_sound_div (params[0]) ;
+}
+
+static int fxi_change_sound (INSTANCE * my, int * params)
+{
+    return change_sound_div (params[0], params[1], params[2]) ;
+}
+
+static int fxi_change_channel (INSTANCE * my, int * params)
+{
+    return change_channel_div (params[0], params[1], params[2]) ;
+}
+
+static int fxi_is_playing_sound (INSTANCE * my, int * params)
+{
+    return is_playing_sound_div (params[0]) ;
+}
+
+static int fxi_reset_sound (INSTANCE * my, int * params)
+{
+    return stop_sound_div (-1) ;
+}
+
 
 /*
  *  FUNCTION : fxi_set_channel_volume
@@ -3042,6 +3007,68 @@ static int fxi_stop_mode7 (INSTANCE * my, int * params)
     return 1 ;
 }
 
+/* Modo 8 */
+
+static int fxi_load_wld (INSTANCE * my, int * params)
+{
+    int r = gr_m8_load (string_get(params[0]), params[1]) ;
+    string_discard (params[0]) ;
+    return r ;
+}
+
+static int fxi_save_wld (INSTANCE * my, int * params)
+{
+    int r = gr_m8_save (string_get(params[0])) ;
+    string_discard (params[0]) ;
+    return r ;
+}
+
+static int fxi_start_mode8 (INSTANCE * my, int * params)
+{
+    gr_mode8_start (params[0], params[1], params[2]) ;
+    return 1 ;
+}
+
+static int fxi_stop_mode8 (INSTANCE * my, int * params)
+{
+    gr_mode8_stop (params[0]) ;
+    return 1 ;
+}
+
+static int fxi_go_to_flag (INSTANCE * my, int * params)         { return gr_m8_go_to_flag (my, params[0]) ; }
+static int fxi_set_sector_height (INSTANCE * my, int * params)  { return gr_m8_set_sector_height (params[0], params[1], params[2]) ; }
+static int fxi_get_sector_height (INSTANCE * my, int * params)  { return gr_m8_get_sector_height (params[0], (int *)params[1], (int *)params[2]) ; }
+static int fxi_set_point_m8 (INSTANCE * my, int * params)       { return gr_m8_set_point (params[0], params[1], params[2]) ; }
+static int fxi_get_point_m8 (INSTANCE * my, int * params)       { return gr_m8_get_point (params[0], (int *)params[1], (int *)params[2]) ; }
+static int fxi_set_fog (INSTANCE * my, int * params)            { return gr_m8_set_fog (params[0], params[1]) ; }
+static int fxi_set_sector_texture (INSTANCE * my, int * params) { return gr_m8_set_sector_texture (params[0], params[1], params[2], params[3]) ; }
+static int fxi_get_sector_texture (INSTANCE * my, int * params) { return gr_m8_get_sector_texture (params[0], (int *)params[1], (int *)params[2], (int *)params[3]) ; }
+static int fxi_set_wall_texture (INSTANCE * my, int * params)   { return gr_m8_set_wall_texture (params[0], params[1], params[2]) ; }
+static int fxi_get_wall_texture (INSTANCE * my, int * params)   { return gr_m8_get_wall_texture (params[0], (int *)params[1], (int *)params[2]) ; }
+static int fxi_set_env_color (INSTANCE * my, int * params)      { return gr_m8_set_env_color (params[0], params[1], params[2]) ; }
+static int fxi_set_sky_m8 (INSTANCE * my, int * params)         { return gr_m8_set_sky (params[0], params[1], params[2], params[3]) ; }
+
+/* M8_SIGHT (proceso, desde): linea de vision en el modo 8 desde el proceso que llama (o desde el indicado). Con un identificador
+ * devuelve ese identificador si se ve y 0 si no; con un tipo de proceso, el identificador del primero de ese tipo que se ve. */
+static int fxi_m8_sight (INSTANCE * my, int * params)
+{
+    INSTANCE * from = params[1] ? instance_get (params[1]) : my, * to ;
+
+    if (!from) return 0 ;
+    if (params[0] >= FIRST_INSTANCE_ID)
+    {
+        to = instance_get (params[0]) ;
+        return (to && gr_m8_sight (from, to)) ? params[0] : 0 ;
+    }
+    for (to = first_instance ; to ; to = to->next)
+    {
+        int status = LOCDWORD(to,STATUS) & ~STATUS_WAITING_MASK ;
+        if (to == from || LOCDWORD(to,PROCESS_TYPE) != params[0] || (status != STATUS_RUNNING && status != STATUS_FROZEN)) continue ;
+        if (gr_m8_sight (from, to)) return LOCDWORD(to,PROCESS_ID) ;
+    }
+    return 0 ;
+}
+
 /* Scroll */
 
 static int fxi_start_scroll (INSTANCE * my, int * params)
@@ -3062,102 +3089,6 @@ static int fxi_move_scroll (INSTANCE * my, int * params)
 {
     gr_scroll_draw (params[0], 0, 0) ;
     return 1 ;
-}
-
-/* Reproducción de FLI */
-
-FLIC * current_fli = 0 ;
-int    current_fli_x = 0 ;
-int    current_fli_y = 0 ;
-
-/*
- *  FUNCTION : fxi_start_fli
- *
- *  Load & start playing a FLI/FLC animation
- *
- *  PARAMS:
- *
- *      file : filename/path for the FLI/FLC file
- *      x,y  : screen position
- *
- */
-
-static int fxi_start_fli (INSTANCE * my, int * params)
-{
-    const char * str = string_get(params[0]) ;
-
-    if (!str) return 0 ;
-    if (current_fli) flic_destroy (current_fli) ;
-    current_fli = flic_open (str) ;
-    current_fli_x = params[1] ;
-    current_fli_y = params[2] ;
-    object_list_dirty = 1;
-    string_discard (params[0]) ;
-    if (current_fli) return current_fli->header.frames ;
-    return 1 ;
-}
-
-
-/*
- *  FUNCTION : fxi_reset_fli
- *
- *  Reset current FLI/FLC animation to frame 0
- *
- *  PARAMS:
- *
- *      No params
- *
- */
-
-static int fxi_reset_fli (INSTANCE * my, int * params)
-{
-    if (current_fli) flic_reset (current_fli) ;
-    return 1 ;
-}
-
-/*
- *  FUNCTION : fxi_end_fli
- *
- *  Stop current FLI/FLC animation
- *
- *  PARAMS:
- *
- *      No params
- *
- */
-
-static int fxi_end_fli (INSTANCE * my, int * params)
-{
-    if (current_fli)
-    {
-        object_list_dirty = 1;
-        flic_destroy (current_fli) ;
-        current_fli = 0 ;
-    }
-    return 1 ;
-}
-
-/*
- *  FUNCTION : fxi_frame_fli
- *
- *  Check status for the current FLI/FLC animation
- *
- *  RETURN VALUE:
- *
- *      Current frame or 0 if animation has ended
- *
- *  PARAMS:
- *
- *      No params
- *
- */
-
-static int fxi_frame_fli (INSTANCE * my, int * params)
-{
-    if (current_fli)
-        return current_fli->finished ? 0 : current_fli->current_frame ;
-    return 0 ;
-
 }
 
 /* STRINGS */

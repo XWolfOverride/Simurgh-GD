@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes */
+/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes, directiva //$ancient, alias solo con //$ancient on */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -135,6 +135,7 @@ static const struct { const char * from ; const char * to ; } sysproc_aliases[] 
 	{ "LOAD_MAP", "LOAD_IMAGE" },
 	{ "LOAD_PNG", "LOAD_IMAGE" },
 	{ "LOAD_PCX", "LOAD_IMAGE" },
+	{ "UNLOAD_PCM", "UNLOAD_WAV" },
 	{ 0, 0 }
 } ;
 
@@ -147,7 +148,53 @@ static int sysproc_is_alias (const char * name)
 	return 0 ;
 }
 
+/* Destino de un alias (NULL si name no es un alias). Los nombres antiguos (load_map...) solo se aceptan con //$ancient on */
+
+const char * sysproc_alias_target (const char * name)
+{
+	int n ;
+	for (n = 0 ; sysproc_aliases[n].from ; n++)
+		if (strcmp (sysproc_aliases[n].from, name) == 0) return sysproc_aliases[n].to ;
+	return NULL ;
+}
+
+/* Funciones de programas antiguos (DIV) que Simurgh acepta solo como funciones vacias, y solo con //$ancient on */
+
+static const char * ancient_only[] = { "LOAD_PAL", "SET_COLORS", "GET_COLORS", 0 } ;
+
+int sysproc_is_ancient (const char * name)
+{
+	int n ;
+	for (n = 0 ; ancient_only[n] ; n++)
+		if (strcmp (ancient_only[n], name) == 0) return 1 ;
+	return sysproc_alias_target (name) != NULL ;
+}
+
+static int ancient_id (int id)
+{
+	int n ;
+	for (n = 0 ; ancient_only[n] ; n++)
+		if (identifier_search_or_add (ancient_only[n]) == id) return 1 ;
+	for (n = 0 ; sysproc_aliases[n].from ; n++)
+		if (identifier_search_or_add (sysproc_aliases[n].from) == id) return 1 ;
+	return 0 ;
+}
+
+static SYSPROC * sysproc_get_raw (int id) ;
+
 SYSPROC * sysproc_get (int id)
+{
+	SYSPROC * s ;
+
+	/* Un alias (load_map...) o una funcion vacia (load_pal...) sin //$ancient on: es como si no existiera */
+	if (!fxc_ancient && ancient_id (id)) return NULL ;
+
+	s = sysproc_get_raw (id) ;
+	if (s && !fxc_ancient && sysproc_is_ancient (s->name)) return NULL ;
+	return s ;
+}
+
+static SYSPROC * sysproc_get_raw (int id)
 {
 	SYSPROC * s ;
 	int n ;

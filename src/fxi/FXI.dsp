@@ -1,3 +1,4 @@
+# Simurgh: modificado 2026-11-15 - sin g_flic.c (FLI eliminado)
 # Microsoft Developer Studio Project File - Name="FXI" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
@@ -123,10 +124,6 @@ SOURCE=.\src\g_conversion.c
 # Begin Source File
 
 SOURCE=.\src\g_draw.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\src\g_flic.c
 # End Source File
 # Begin Source File
 
@@ -468,10 +465,6 @@ SOURCE=..\include\files.h
 # Begin Source File
 
 SOURCE=..\include\files_st.h
-# End Source File
-# Begin Source File
-
-SOURCE=inc\flic.h
 # End Source File
 # Begin Source File
 

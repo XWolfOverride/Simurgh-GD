@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes */
+/* Simurgh: modificado 2026-11-15 - asignacion de memoria con xalloc.h (a cero lo que se escribe en el .dcb), correcciones de desbordes, directiva //$ancient */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -567,6 +567,33 @@ extern void load_file (const char * filename) ;
 
 static FXC_TLS char buffer[1024] ;	/* zona de trabajo: token.name apunta aqui */
 
+/* Directivas del compilador dentro de comentarios: la linea //$ancient on o el comentario de bloque con $ancient on (y off). Activan
+ * las funciones de los programas antiguos (DIV) que ya no existen y que Simurgh solo acepta como funciones vacias (load_pal,
+ * set_colors, get_colors). */
+FXC_TLS int fxc_ancient = 0 ;
+
+static int directive_word (const char * p, const char * word)
+{
+	while (*word)
+	{
+		char c = *p++ ;
+		if (c >= 'A' && c <= 'Z') c += 'a' - 'A' ;
+		if (c != *word++) return 0 ;
+	}
+	return 1 ;
+}
+
+static void comment_directive (const char * p)
+{
+	if (*p != '$') return ;
+	p++ ;
+	if (!directive_word (p, "ancient")) return ;
+	p += 7 ;
+	while (*p == ' ' || *p == '\t') p++ ;
+	if (directive_word (p, "on"))  fxc_ancient = 1 ;
+	else if (directive_word (p, "off")) fxc_ancient = 0 ;
+}
+
 void token_next ()
 {
 	int  i, len ;
@@ -634,6 +661,7 @@ void token_next ()
 
 		if (*source_ptr == '/' && *(source_ptr+1) == '*')
 		{
+			comment_directive (source_ptr + 2) ;
 			while (*source_ptr != '*' || source_ptr[1] != '/')
 			{
 				if (*source_ptr == '\n') {
@@ -652,6 +680,7 @@ void token_next ()
 
 		if (*source_ptr == '/' && *(source_ptr+1) == '/')
 		{
+			comment_directive (source_ptr + 2) ;
 			while (*source_ptr != '\n' && *source_ptr)
 				source_ptr++ ;
 

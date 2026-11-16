@@ -600,14 +600,14 @@ int compile_varspace (VARSPACE * n, segment * data, int additive, int copies, in
             break ;
         }
 
-        if (varspace_search (n, token.code)) {
+        if (varspace_find (n, token.code)) {
             compile_error (MSG_VARIABLE_ALREADY) ;
         }
 
         /* (2006/11/19 19:34 GMT-03:00, Splinter - jj_arg@yahoo.com) */
         if ( collision ) {
             for (i=0; collision[i];i++) {
-                if (varspace_search (collision[i], token.code)) {
+                if (varspace_find (collision[i], token.code)) {
                     compile_error (MSG_VARIABLE_ALREADY) ;
                 }
             }
@@ -665,25 +665,46 @@ int compile_varspace (VARSPACE * n, segment * data, int additive, int copies, in
                 type.chunk[i-j] = n ;
             }
 
-            members = (VARSPACE *) xcalloc (1, sizeof(VARSPACE)) ;
-            varspace_init (members) ;
+            /* STRUCT en linea: por debajo es un TYPE con nombre automatico (autotype_<nombre>_struct) y la variable es de ese tipo.
+               Asi un struct y un type siguen el mismo camino: los miembros se compilan una vez en un segmento propio y se copian. */
+            {
+                segment  * as = segment_new () ;
+                VARSPACE * av = varspace_new () ;
+                TYPEDEF    at = typedef_new (TYPE_STRUCT) ;
+                char       autoname[256] ;
+                int        acode, uniq = 1 ;
 
-            size = compile_varspace (members, data, 0, count, 0, NULL, 0) ;
+                snprintf (autoname, sizeof(autoname), "AUTOTYPE_%s_STRUCT", identifier_name (code)) ;
+                while (typedef_by_name (acode = identifier_search_or_add (autoname)))
+                    snprintf (autoname, sizeof(autoname), "AUTOTYPE_%s_STRUCT_%d", identifier_name (code), ++uniq) ;
 
-            type.varspace = members ;
+                at.chunk[0].count = 1 ;
+                at.varspace = av ;
+                typedef_name (at, acode) ;
+                segment_name (as, acode) ;
+                compile_varspace (av, as, 0, 1, 0, NULL, 0) ;
+                type.varspace = av ;
 
-            token_next() ;
-            if (token.type == IDENTIFIER && token.code == identifier_equal) {
-                i = data->current ;
-                data->current = n->vars[n->count].offset ;
-                compile_struct_data (members, data, count, 0);
-                data->current = i ;
-            } else {
-                token_back() ;
-            }
+                /* count copias del tipo en el segmento de datos (con sus cadenas registradas con el desplazamiento real) */
+                for (i = 0 ; i < count ; i++) {
+                    for (j = 0 ; j < av->stringvar_count ; j++) {
+                        varspace_varstring (n, av->stringvars[j] + data->current) ;
+                    }
+                    segment_add_from (data, as) ;
+                }
 
-            for (i = 0 ; i < members->stringvar_count ; i++) {
-                varspace_varstring (n, members->stringvars[i]) ;
+                token_next() ;
+                if (token.type == IDENTIFIER && token.code == identifier_equal) {
+                    i = data->current ;
+                    data->current = n->vars[n->count].offset ;
+                    if (!additive) {
+                        data->current += base_offset ;
+                    }
+                    compile_struct_data (av, data, count, 0) ;
+                    data->current = i ;
+                } else {
+                    token_back() ;
+                }
             }
 
             n->size += typedef_size(type) ;

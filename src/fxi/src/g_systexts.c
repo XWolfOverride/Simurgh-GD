@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin texto de sistema de 8 bits */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -923,12 +924,6 @@ void gr_sys_putchar (GRAPH * map, int ox, int oy, Uint8 c)
                 }                                        			\
         }
 
-        if (map->depth == 8)
-		{
-			c = corr[c] ;
-			PUTSYS(Uint8)
-		}
-        else
 		{
 			c = corr[c] ;
 			PUTSYS(Uint16)
@@ -983,7 +978,6 @@ void gr_sys_puts (GRAPH * map, int x, int y, Uint8 * str, int len)
 void gr_sys_color (int cfg, int cbg)
 {
 	if (cbg == 0) bg = 0;
-	if (enable_16bits)
 	{
 		if (cfg > 0)
 			fg = gr_rgb (((cfg & 0xFF0000) >> 16),
@@ -993,22 +987,6 @@ void gr_sys_color (int cfg, int cbg)
 			bg = gr_rgb (((cbg & 0xFF0000) >> 16),
 						 ((cbg & 0x00FF00) >>  8),
 						  (cbg & 0x0000FF) ) ;
-	}
-	else
-	{
-		if (!trans_table_updated)
-			gr_make_trans_table() ;
-
-		if (cfg > 0)
-			fg = gr_find_nearest_color (
-				((cfg & 0xFF0000) >> 16),
-				((cfg & 0x00FF00) >>  8),
-				 (cfg & 0x0000FF) ) ;
-		if (cbg > 0)
-			bg = gr_find_nearest_color (
-				((cbg & 0xFF0000) >> 16),
-				((cbg & 0x00FF00) >>  8),
-				 (cbg & 0x0000FF) ) ;
 	}
 }
 

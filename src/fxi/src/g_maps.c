@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG */
+/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG, adaptacion a 16 bits al cargar, sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -330,6 +330,8 @@ int gr_read_truecolor_rows (file * fp, GRAPH * gr, int srcbpp)
 
 static GRAPH * gr_read_map (file * fp)
 {
+	unsigned char filepal[768] ;
+	int have_pal = 0 ;
 	char header[8] ;
 	unsigned short int w, h, c ;
 	Uint32 y ;
@@ -372,10 +374,8 @@ static GRAPH * gr_read_map (file * fp)
 
 	if (gr->depth == 8)
 	{
-		if (palette_loaded)
-			file_seek (fp, 576 + 768, SEEK_CUR) ;
-		else
-			if (!gr_read_pal (fp)) return 0 ;
+		if (!gr_read_pal_keep (fp, filepal)) return 0 ;
+		have_pal = 1 ;
 	}
 
 	/* Puntos de control */
@@ -440,7 +440,9 @@ static GRAPH * gr_read_map (file * fp)
 	}
 
 	gr->modified = 1 ;
-	return gr ;
+
+	/* Los graficos de 8 y 1 bit se adaptan una sola vez, al cargarlos, a los 16 bits del modo (con la paleta del propio fichero) */
+	return bitmap_adapt16 (gr, have_pal ? filepal : NULL) ;
 }
 
 /* Funciones de carga de nivel superior */
@@ -586,22 +588,6 @@ int gr_save_map (GRAPH * gr, const char * filename)
 	strncpy (name, gr->name, 31) ;
 	file_write (fp, name, 32) ;
 
-	if (gr->depth == 8)
-	{
-		unsigned char colors[256][3] ;
-		char gamma[576] ;
-		int i ;
-		for (i = 0 ; i < 256 ; i++)
-		{
-			colors[i][0] = palette[i].r / 4 ;
-			colors[i][1] = palette[i].g / 4 ;
-			colors[i][2] = palette[i].b / 4 ;
-		}
-		memset (gamma, 0, sizeof(gamma)) ;
-		file_write (fp, colors, 768) ;
-		file_write (fp, gamma, 576) ;
-	}
-
 	c = gr->ncpoints ;
 	file_writeUint16 (fp, &c) ;
 	for (c = 0 ; c < gr->ncpoints ; c++)
@@ -727,17 +713,6 @@ void gr_row_to_rgba (GRAPH * gr, Uint32 y, Uint8 * out)
 			*out++ = gr->alpha ? gr->alpha[y * gr->width + x] : ((c == 0 && !(gr->info_flags & GI_NOCOLORKEY)) ? 0 : 255) ;
 		}
 		free (tmp) ;
-	}
-	else if (gr->depth == 8)
-	{
-		for (x = 0 ; x < gr->width ; x++)
-		{
-			int i = line[x] ;
-			*out++ = palette[i].r ;
-			*out++ = palette[i].g ;
-			*out++ = palette[i].b ;
-			*out++ = (i == 0 && !(gr->info_flags & GI_NOCOLORKEY)) ? 0 : 255 ;
-		}
 	}
 	else	/* 1 bit: bit a 1 = blanco, a 0 = transparente */
 	{
@@ -978,4 +953,69 @@ void bitmap_16bits_conversion()
 
 		map = map->next;
 	}
+}
+
+/*
+ *  FUNCTION : bitmap_adapt16
+ *
+ *  Devuelve una copia en 16 bits (formato de la pantalla) de un grafico de 8 o de 1 bit y destruye el original: los graficos se
+ *  adaptan al modo UNA vez, al cargarlos, y a partir de ahi se dibujan, se modifican y se graban en 16 bits. Un grafico que ya es de
+ *  16 bits se devuelve tal cual.
+ *
+ *  PARAMS :
+ *      src     grafico a adaptar
+ *      rgb     paleta de 256 colores (tripletes r, g, b de 0 a 255); NULL = la paleta actual
+ *
+ *  El indice 0 es transparente y sigue siendo 0 (negro puro); otro color que diera negro puro se deja en el casi negro 1.
+ */
+
+GRAPH * bitmap_adapt16 (GRAPH * src, const unsigned char * rgb)
+{
+	GRAPH * dst ;
+	Uint16  table[256] ;
+	Uint32  x, y ;
+	int     n ;
+
+	if (!src || src->depth == 16) return src ;
+
+	if (!scr_initialized) gr_init (320, 200) ;		/* hace falta conocer el formato de la pantalla */
+
+	if (src->depth == 8)
+	{
+		for (n = 0 ; n < 256 ; n++)
+		{
+			Uint32 c ;
+			if (rgb) c = SDL_MapRGB (screen->format, rgb[n*3], rgb[n*3+1], rgb[n*3+2]) ;
+			else     c = SDL_MapRGB (screen->format, n, n, n) ;
+			if (n && c == 0) c = 1 ;
+			table[n] = (Uint16) c ;
+		}
+		table[0] = 0 ;
+	}
+
+	dst = bitmap_new (src->code, src->width, src->height, 16, 1) ;
+	if (!dst) return src ;
+
+	memcpy (dst->name, src->name, sizeof(dst->name)) ;
+	dst->cpoints  = src->cpoints ;
+	dst->ncpoints = src->ncpoints ;
+	src->cpoints  = NULL ;
+	dst->modified = 1 ;
+
+	for (y = 0 ; y < src->height ; y++)
+	{
+		Uint8  * from = (Uint8 *)src->data + (size_t)src->pitch * y ;
+		Uint16 * to   = (Uint16 *)((Uint8 *)dst->data + (size_t)dst->pitch * y) ;
+
+		if (src->depth == 8)
+			for (x = 0 ; x < src->width ; x++) to[x] = table[from[x]] ;
+		else
+		{
+			Uint16 white = (Uint16) SDL_MapRGB (screen->format, 255, 255, 255) ;
+			for (x = 0 ; x < src->width ; x++) to[x] = (from[x >> 3] & (0x80 >> (x & 7))) ? white : 0 ;
+		}
+	}
+
+	bitmap_destroy (src) ;
+	return dst ;
 }

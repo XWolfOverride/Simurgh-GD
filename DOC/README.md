@@ -12,6 +12,9 @@ Para desarrolladores y agentes de IA. Resumen de decisiones en [`../AGENTS.md`](
 | [PROBLEMAS.md](PROBLEMAS.md) | Lista de problemas conocidos del código heredado y del plan |
 | [IDE-FENXEDIT2.md](IDE-FENXEDIT2.md) | FenXEdit2, el IDE escrito en Fenix, parte del proyecto |
 | [MIGRACION-FENIX.md](MIGRACION-FENIX.md) | Cambios del lenguaje respecto a Fenix (se apunta cada uno al decidirlo) |
+| [MIGRACION-DIV2.md](MIGRACION-DIV2.md) | Qué cambiar (y qué ya funciona) para llevar un programa de DIV 2 a Simurgh |
+| [MODO8.md](MODO8.md) | El modo 8 de Simurgh (mapas de sectores 2,5D): formato de mapa de texto, funciones, estructura `m8`, variables y diferencias con DIV |
+| [MODO8-DIV.md](MODO8-DIV.md) | Cómo funcionaba el modo 8 de DIV 2: funciones, estructura `m8`, variables y formato `.wld` original |
 | [FORMATOS-IMAGEN.md](FORMATOS-IMAGEN.md) | Formatos de imagen y recursos, `LOAD_IMAGE` por cabecera y alias del compilador |
 | [HOJA-DE-RUTA.md](HOJA-DE-RUTA.md) | Fases, pruebas y temas pendientes antes de la primera versión |
 | [../tools/upstream-diff.sh](../tools/upstream-diff.sh) | Compara `src/` con `upstream/` (lista, resumen, diff) y comprueba los avisos de cambio exigidos por la GPL |

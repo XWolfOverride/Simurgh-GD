@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - graficos de 8 y 1 bit adaptados a 16 bits al cargar; sin modo de 256 colores */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -95,6 +96,8 @@ gr_read_pcx (const char * filename)
 	int       width, height, x, y, p, count ;
 	GRAPH *   bitmap ;
 	Uint8 *   ptr, ch ;
+	Uint8     filepal[768], marker ;
+	int       have_pal = 0 ;
 
 	file = file_open (filename, "rb") ;
 	if (!file) gr_error ("%s: Could not open the file\n", filename) ;
@@ -144,7 +147,11 @@ gr_read_pcx (const char * filename)
 		gr_error ("%s: Non supported color depth\n", filename) ;
 	}
 
+	/* La paleta de un PCX de 256 colores va al final: 0x0C y 256 tripletes de 0 a 255 */
+	if (header.BitsPerPixel == 8 && file_read (file, &marker, 1) == 1 && marker == 12 && file_read (file, filepal, 768) == 768)
+		have_pal = 1 ;
+
 	bitmap->modified = 1 ;
-	return bitmap ;
+	return bitmap_adapt16 (bitmap, have_pal ? filepal : NULL) ;
 }
 

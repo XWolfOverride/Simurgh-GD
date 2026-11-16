@@ -1,10 +1,30 @@
-// Fenxedit ][ (C) Semitex by Wolf helped by EclipseOK
+// SimurghIDE (C) 2026 XWolf Override.
+// based on Fenxedit ][ (C) Wolf helped by EclipseOk
 Program FenXEdit2;           //------------------- IDE FenXEdit ][
-Import "image"
+
+//Import "image
+
 Const AppName="FenXEdit ]["; // Nombre del editor
       AppVersion="0.31";     // y su version
       MaxCwins=7;            // Maximo de codigos simultaneos
       MaxCode=20000;         // Maximo de lineas por c¢digo
+      // Mensajes entre procesos (variable local msg)
+      MSG_NONE=0;            // Sin mensaje
+      MSG_REDRAW=1;          // Actualizar grafico
+      MSG_CLICK=2;           // Click en boton | Tag= id_boton o (1=Cerrar)
+      MSG_SELECT=3;          // Al seleccionar dialogo (UpIt)
+      MSG_MODIFY=4;          // Al modificar un control de texto | Tag= id_control
+      MSG_DROP=5;            // Drop del Drag
+      MSG_RELOAD=128;        // Releer el contenido (listado de directorio, ...)
+      MSG_CLOSING=256;       // El dialogo se esta cerrando
+      // Editor de codigo: repintado parcial (MSG_xxx + numero de linea / de lineas movidas)
+      MSG_ROW=500;           // Repintar una linea
+      MSG_SCROLL_UP=600;     // Desplazar hacia arriba
+      MSG_SCROLL_DOWN=700;   // Desplazar hacia abajo
+      // Valor de lotag con el que una ventana no se puede seleccionar
+      LOTAG_NOSEL=512;      
+      // Tipo de arrastre (drag.msg)
+      DRAG_MAP=2;            // Mapa
 // end
 Global WinSel;             // Ventana seleccionada
        ToWinSel;           // Ventana que aspira a ser seleccionada (raton encima)
@@ -40,12 +60,7 @@ Global WinSel;             // Ventana seleccionada
 
 Local Bug;                 // 0.84 Bug (primera local erronea)
       Dc;                  // Device Context (Como en los Windows)
-      Msg,tag,hitag,lotag; // Sistema de mensajeria
-                           //  msg 1: Actualizar grafico   
-                           //  msg 2: Click en boton | Tag= id_boton o (1=Cerrar)
-                           //  msg 3: Al seleccionar dialogo (UpIt)
-                           //  msg 4: Al modificar un control de texto | Tag= id_control
-                           //  msg 5: Drop del Drag
+      Msg,tag,hitag,lotag; // Sistema de mensajeria (ver constantes MSG_xxx)
       Ofsx,ofsy;           // Inici del DC en la ventana
       An,al;               // Ancho, Alto
       Icon;                // Icono de minimizado
@@ -117,7 +132,7 @@ Loop
  End;
  lt.y=y;
  // Protector de pantalla;
- If (msg==0)
+ If (msg==MSG_NONE)
   If (timer[9]>6000) fade(15,15,15,1);End; 
   If ((scan_code<>ascan) OR (mouse.x<>mx) OR (mouse.y<>my) OR (mouse.left<>Aleft))
    ascan=scan_code;
@@ -140,7 +155,7 @@ Loop
   If (NOT MouseLock)
    Proc=get_id(0);i=0;ToWinSel=0;
    While (proc>0) 
-    If (proc.IsWindow AND Proc.Lotag<>512)
+    If (proc.IsWindow AND Proc.Lotag<>LOTAG_NOSEL)
      If (incuadre(mouse.x,mouse.y,proc.x,proc.y,proc.an,proc.al))
       If (i>Proc.z)
        i=Proc.z;
@@ -155,7 +170,7 @@ Loop
    atowinsel=towinsel;
    KeyBuf="";
   end;
- End;    // Msg==0
+ End;    // Msg==MSG_NONE
  // Tipo de cursor
  if (mouse.graph>900 and mouse.graph<1000)
   if (drag.PseudoID)
@@ -201,7 +216,7 @@ begin
     Mouselock=0;
     frame;
     If (exists(towinsel))
-     toWinSel.msg=5;
+     toWinSel.msg=MSG_DROP;
     end;
    end;
    Dc=0;
@@ -250,7 +265,7 @@ begin
  if (Len(keybuf)==1)
   Keybuf="";
  else
-  Keybuf=substr(Keybuf,1,-1);
+  Keybuf=substr(Keybuf,1);
  end;
  Return(i);
 end;
@@ -275,8 +290,8 @@ set_center(0,graph,0,0);
 x=0;y=0;acwins=-1;
 Loop
 // Si se ha modificado, se repinta
-If (acwins<>cwins or acwinsel<>cwinsel or Msg==1)
- msg=0;
+If (acwins<>cwins or acwinsel<>cwinsel or Msg==MSG_REDRAW)
+ msg=MSG_NONE;
  acwins=cwins;
  acwinsel=cwinsel;
  map_clear(0,graph,0);
@@ -322,7 +337,7 @@ If (collision(Type mouse))
     winsel=SiNoBox("Ein? :(","¨Seguro que desea salir de FenXEdit ][??");Frame;
     If (winsel.hitag)
      if (cWinSel>=0) CloseCode();end;
-     father.msg=1;
+     father.msg=MSG_REDRAW;
      fade(0,0,0,2);While (fading);Frame(3);End;
      exit();
     End;
@@ -350,7 +365,7 @@ If (collision(Type mouse))
        CloseCode();
        cwinsel=scwin;
        OpenCode();
-       lt.msg=1;
+       lt.msg=MSG_REDRAW;
       end;
      end;
     End; 

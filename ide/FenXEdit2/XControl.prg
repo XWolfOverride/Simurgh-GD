@@ -54,7 +54,7 @@ draw_box(1,1,an-1,al-1);
 Set_text_color(c1);
 TMP=write_in_map(0,txt,4);
  map_put(0,graph,tmp,an / 2,al / 2);
-unload_map(0,tmp);
+if (tmp>0) unload_map(0,tmp); end;
 Return(graph);
 End;
 
@@ -70,8 +70,9 @@ Process AddLabel(dc,x,y,String text);
 Begin
 Set_text_color(rgb(10,10,10));
 graph=write_in_map(0,text,0);
-map_put(0,dc,graph,x,y);
-unload_map(0,graph);
+if (graph>0) map_put(0,dc,graph,x,y);
+ unload_map(0,graph);
+end;
 End;
 
 Process AddLabel2(dc,x,y,String text,Int t,f,an,al,cm);
@@ -79,6 +80,7 @@ Private mp;ax,ay;
 Begin
 Set_text_color(t);
 mp=write_in_map(0,text,cm);
+If (mp<=0) Return(0); End;
 If (an==-1)
  An=graphic_info(0,mp,G_Width);
 End;
@@ -114,16 +116,16 @@ loop
   drawing_color(cbord);
   set_text_color(ctext);
   mp=write_in_map(0,hint,0);
-  Map_put(0,mpx,mp,-tag,2);
+  if (mp>0) Map_put(0,mpx,mp,-tag,2); end;
   draw_rect(0,0,an,al);
   if (color==cBock)
    i=Text_Width(0,hint)+2;
    Draw_box(i,2,i+3,10);
   end;
   Map_put(0,dc,mpx,x,y);
-  father.msg=1;
+  father.msg=MSG_REDRAW;
   ahint=hint;
-  Unload_Map(0,mp);
+  if (mp>0) Unload_Map(0,mp); end;
   acontrol=father.control;
   atowinsel=towinsel;
  end;
@@ -134,7 +136,7 @@ loop
  end;
  if (Father.control==id and father==Towinsel)
   if ((i=NextKey())<>0)
-   Father.Msg=4;
+   Father.Msg=MSG_MODIFY;
    Father.Tag=id;
    Father.Lotag=Lotag;
    Father.Hitag=Hitag;
@@ -143,11 +145,11 @@ loop
      if (Len(hint)==1)
       hint="";
      else
-      hint=substr(hint,0,-2);
+      hint=substr(hint,0,-1);
      end;
     end;
     Case 13:
-     Father.Msg=2;
+     Father.Msg=MSG_CLICK;
      Father.Tag=id;
      Father.Lotag=Lotag;
      Father.Hitag=Hitag;
@@ -159,7 +161,7 @@ loop
   end;
  end;
 frame;
-IF (FATHER.MSG==256) BREAK;END;
+IF (FATHER.MSG==MSG_CLOSING) BREAK;END;
 end;
 unload_map(0,mpx);
 end;
@@ -200,18 +202,18 @@ If (tag<>atag)
  draw_box(atag,0,63,11);
  map_put(0,dc,a,x,y);
  atag=tag;
- father.msg=1;Frame;
+ father.msg=MSG_REDRAW;Frame;
 End;
 If (father==winsel)
  If (mouse.left AND Incuadre(mouse.x,mouse.y,father.x+father.ofsx+x,father.y+father.ofsy+y,63,11))
   Tag=((mouse.x-(father.x+father.ofsx+x))*127) / 63;
-  father.msg=2;
+  father.msg=MSG_CLICK;
   father.tag=id;
   Info=itoa((TAG*100)/127)+"%";
  End;
 End;
 Frame;
-If (father.msg==256) Break;End
+If (father.msg==MSG_CLOSING) Break;End
 End;
 End;
 
@@ -236,13 +238,13 @@ If (father==winsel)
   b=bt; 
  End; 
  If (ab<>b)
-  father.msg=1;
+  father.msg=MSG_REDRAW;
   map_put(0,dc,b,x,y);
   ab=b;
   Frame;
  end; 
  If (!mouse.left and aleft and b==bu)
-  father.msg=2;
+  father.msg=MSG_CLICK;
   father.hitag=hitag;
   father.lotag=lotag;
   father.tag=PseudoId;
@@ -251,11 +253,11 @@ If (father==winsel)
  End;
  aleft=mouse.left;
 End;
-If (father.msg==256) 
+If (father.msg==MSG_CLOSING) 
  Break;
 end
 Frame;
-If (father.msg==256) Break;End
+If (father.msg==MSG_CLOSING) Break;End
 End;
 unload_map(0,bt);
 unload_map(0,bd);
@@ -277,8 +279,9 @@ Process ILabel(dc,x,y,String text,Int color);
 Begin
 Set_text_color(color);
 graph=write_in_map(0,text,4);
-map_put(0,dc,graph,x,y);
-unload_map(0,graph);
+if (graph>0) map_put(0,dc,graph,x,y);
+ unload_map(0,graph);
+end;
 End;
 
 Process MakeBTNImage(an,al,String text,Int cf,ct);
@@ -302,7 +305,7 @@ Private ax,ay,Todo;
         String Leko="Restaurar
 Cerrar";//
 Begin
-father.Msg=0;
+father.Msg=MSG_NONE;
 If (winsel==father)
  If (Incuadre(mouse.x,mouse.y,(father.x+father.an)-18,father.y+5,10,10) AND (father.icon<>0))
   Info="Minimizar";
@@ -320,7 +323,7 @@ If (winsel==father)
     While (mouse.left) Frame;End;
     signal(father,s_wakeup);MouseLock=0;
     If (incuadre(mouse.x,mouse.y,father.x+6,father.y+5,10,10))
-     father.msg=2;
+     father.msg=MSG_CLICK;
      father.tag=1;
      Frame;
     End;
@@ -349,7 +352,7 @@ If (winsel==father)
     z=10;
     Mouselock=1;
     While (mouse.left) Frame;End;
-    MouseLock=0;father.lotag=512;hitag=0;
+    MouseLock=0;father.lotag=LOTAG_NOSEL;hitag=0;
     While (graph<>0)
      If (collision(Type mouse))
       info=father.hint;
@@ -368,15 +371,15 @@ If (winsel==father)
       End;
       If (mouse.right)
        tag=Menu(mouse.x,mouse.y,Leko);Frame;
-       If (tag.msg==0); graph=0;End;
-       If (tag.msg==1); graph=0;Hitag=1;End;
+       If (tag.msg==MSG_NONE); graph=0;End;
+       If (tag.msg==MSG_REDRAW); graph=0;Hitag=1;End;
       End;
      End;
      Frame;
     End;
     signal(father,s_wakeup);father.lotag=0;upit(father);
     if (Hitag==1)
-     Father.msg=2;
+     Father.msg=MSG_CLICK;
      Father.tag=1;
     end;
    Else
@@ -423,7 +426,7 @@ Else
 End;
 Winsel=T;
 if (Winsel<>Awinsel)
- Winsel.msg=3;
+ Winsel.msg=MSG_SELECT;
  AWinsel=Winsel;
 end;
 End;
@@ -441,7 +444,7 @@ If (hitag<=lotag)
   draw_rect(x+1,y+1,x+13,(y+al)-1);
   drawing_color(CBock);
   draw_box(x+1,y+1,x+13,(y+al)-1);
-  father.msg=1;
+  father.msg=MSG_REDRAW;
   cha=hitag+10;
  End; 
 Else
@@ -456,9 +459,9 @@ Else
   draw_box(x+1,y+14,x+13,y+al-14);
   map_put(0,dc,514,x+7,y+20+(tag*(al-40)/hitag));
   cha=tag;
-  father.msg=1;
+  father.msg=MSG_REDRAW;
   Frame;
-  father.msg=2;
+  father.msg=MSG_CLICK;
   father.tag=id;
   Frame;
  End;
@@ -477,7 +480,7 @@ Else
   End;  
  End;
 End;
-if (father.msg==256) break;end;
+if (father.msg==MSG_CLOSING) break;end;
 Frame;
 End;
 End;

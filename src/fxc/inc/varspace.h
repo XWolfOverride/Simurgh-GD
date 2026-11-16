@@ -63,6 +63,7 @@ extern void       varspace_alloc (VARSPACE * n, int count) ;
 extern void       varspace_init (VARSPACE * n) ;
 extern void       varspace_add (VARSPACE * n, VARIABLE v) ;
 extern VARIABLE * varspace_search (VARSPACE * n, int code) ;
+extern VARIABLE * varspace_find   (VARSPACE * n, int code) ;   /* sin alias (height -> z): para comprobar nombres repetidos al declarar */
 extern void       varspace_dump (VARSPACE * n, int indent) ;
 extern void       varspace_destroy (VARSPACE * n) ;
 extern void	  varspace_varstring (VARSPACE * n, int offset) ;

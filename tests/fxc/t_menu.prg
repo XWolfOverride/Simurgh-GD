@@ -328,14 +328,14 @@ PRIVATE
 BEGIN
     ctype = c_m7 ;
     cnumber = 1 ;
-    height = rand (0, 16) ;
+    z = rand (0, 16) ;
     resolution = 4 ;
     x *= 4 ; y *= 4 ;
     LOOP
-        IF height > 0 && speed > -8: speed-- ; END
-        height += speed ;
-        IF (height < 0)
-            height = 0 ;
+        IF z > 0 && speed > -8: speed-- ; END
+        z += speed ;
+        IF (z < 0)
+            z = 0 ;
             speed = rand(5, 15) ;
         END
         FRAME;

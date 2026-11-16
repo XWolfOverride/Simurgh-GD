@@ -1,3 +1,4 @@
+/* Simurgh: modificado 2026-11-15 - sin colores de texto de 8 bits, sin paletas */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -47,7 +48,6 @@
 
 #define MAX_TEXTS 512
 
-int fntcolor8 = -1 ;
 Uint16 fntcolor16 = 0xFFFF ;
 
 typedef struct _text
@@ -59,7 +59,6 @@ typedef struct _text
 	int y ;
 	int z ;
 	int alignment ;
-	int color8 ;
 	int color16 ;
 	int objectid ;
 	int last_value ;
@@ -295,7 +294,7 @@ static int info_text (TEXT * text, REGION * bbox)
 void draw_text (TEXT * text, REGION * clip)
 {
 	const char * str = get_text(text);
-	int save8, save16;
+	int save16;
 	int x, y, width, height;
 	FONT * font;
 	int ret;
@@ -362,15 +361,12 @@ void draw_text (TEXT * text, REGION * clip)
 
 	/* Draw the text */
 
-	save8 = fntcolor8;
 	save16 = fntcolor16;
-	fntcolor8 = text->color8;
 	fntcolor16 = text->color16;
 
     if(!gr_text_put (0, clip, text->fontid, x, y, str))
 	    gr_text_destroy(text->id);
 
-	fntcolor8 = save8;
 	fntcolor16 = save16;
 }
 
@@ -413,7 +409,6 @@ int gr_text_new (int fontid, int x, int y, int alignment, const char * text)
 	texts[textid].z = GLODWORD(TEXTZ) ;
 	texts[textid].alignment = alignment ;
 	texts[textid].text = text ? strdup(text) : 0 ;
-	texts[textid].color8 = fntcolor8 ;
 	texts[textid].color16 = fntcolor16 ;
 	texts[textid].objectid = gr_new_object (texts[textid].z, info_text, draw_text, &texts[textid]);
 	texts[textid].last_value = 0 ;
@@ -590,7 +585,7 @@ int gr_text_put (GRAPH * dest, REGION * clip, int fontid, int x, int y, const un
 	FONT   * f ;
 	Uint8   current_char;
 	int flags ;
-	int save16, save8;
+	int save16;
 
     if (fontid < 0 || fontid > 255 || !fonts[fontid]) {
         gr_con_printf ("Tipo de letra incorrecto (%d)", fontid) ;
@@ -607,18 +602,9 @@ int gr_text_put (GRAPH * dest, REGION * clip, int fontid, int x, int y, const un
 
 	flags = globaldata ? GLODWORD(TEXT_FLAGS) : 0 ;
 
-	save8 = syscolor8;
 	save16 = syscolor16;
 
-	if (fntcolor8 == -1)
-	{
-		gr_setcolor (dest->depth == 8 ? gr_find_nearest_color(255,255,255):gr_rgb(255,255,255));
-	}
-	else
-	{
-		syscolor8 = fntcolor8;
-		syscolor16 = fntcolor16;
-	}
+	syscolor16 = fntcolor16;
 
 	while (*text)
 	{
@@ -646,7 +632,6 @@ int gr_text_put (GRAPH * dest, REGION * clip, int fontid, int x, int y, const un
 		text++ ;
 	}
 
-	syscolor8 = save8;
 	syscolor16 = save16;
 
 	return 1;
@@ -671,9 +656,7 @@ GRAPH * gr_text_bitmap (int fontid, const char * text, int alignment)
 	/* Un refresco de paleta en mitad de gr_text_put puede provocar efectos
 	 * desagradables al modificar el tipo de letra del sistema */
 
-	if (palette_changed) gr_refresh_palette() ;
-
-	gr = bitmap_new_syslib (gr_text_width (fontid, text), gr_text_height (fontid, text), enable_16bits ? 16:8, 1) ;
+	gr = bitmap_new_syslib (gr_text_width (fontid, text), gr_text_height (fontid, text), 16, 1) ;
 	assert (gr) ;
 	gr_clear (gr) ;
 	if (!gr_text_put (gr, 0, fontid, 0, -gr_text_margintop(fontid, text), text)) {
@@ -723,26 +706,10 @@ GRAPH * gr_text_bitmap (int fontid, const char * text, int alignment)
 
 void gr_text_setcolor (int c)
 {
-	int r, g, b;
-
-	if (c == 0)
-	{
-		fntcolor8 = 0;
-		fntcolor16 = 0;
-	}
-	else if (!enable_16bits)
-	{
-		fntcolor8 = c ;
-	}
-	else
-	{
-		gr_get_rgb (c, &r, &g, &b);
-		fntcolor8 = gr_find_nearest_color (r, g, b);
-		fntcolor16 = c ;
-	}
+	fntcolor16 = c ;		/* el color del texto es siempre de 16 bits */
 }
 
 int gr_text_getcolor()
 {
-	return ((enable_16bits)?fntcolor16:fntcolor8) ;
+	return fntcolor16 ;
 }

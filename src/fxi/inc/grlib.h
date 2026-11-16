@@ -1,4 +1,4 @@
-/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG */
+/* Simurgh: modificado 2026-11-15 - LOAD_IMAGE, SAVE_MAP, SAVE_FPG, adaptacion a 16 bits al cargar, sin paletas, modo 8; 2026-11-16 - cielo, linea de vision y procesos solidos (modos 7 y 8) */
 /*
  *  Fenix - Videogame compiler/interpreter
  *  Current release       : FENIX - PROJECT 1.0 - R 0.84
@@ -40,13 +40,11 @@
 extern int              scr_initialized ;
 extern int              audio_initialized ;
 
-extern int				enable_16bits ;      /* 1 = 16bpp MODE on                */
+#define enable_16bits 1          /* Simurgh: siempre 16 bits (el modo de 256 colores ya no existe) */
 extern int				enable_filtering ;   /* 1 = 16bpp filter MODE on         */
 
 extern Uint16			syscolor16 ;
-extern int				syscolor8 ;			 /* Color for drawing primitives	 */
 extern Uint16           fntcolor16 ;
-extern int				fntcolor8 ;			 /* Color for drawing bitmap text	 */
 
 extern Uint32           drawing_stipple;
 
@@ -113,39 +111,22 @@ extern int object_list_unsorted;
 /* Paleta de colores */
 /* ----------------- */
 
-extern SDL_Color    vpalette[256] ;
-extern SDL_Color    palette[256] ;
 
-extern Uint16       colorequiv[256]   ;     /* Equivalencia paleta -> pantalla   */
 extern Uint16       colorghost[65536] ;     /* Deja un color a 50% de intensidad */
 
-extern GRAPH      * background_8bits ;
-extern int          background_8bits_used ;
 extern int          background_is_black ;
 
-extern Uint8        trans_table[256][256] ; /* Tabla de transparencias 8 bits        */
-extern int          trans_table_updated ;   /* 1 = La tabla es utilizable            */
-extern Uint8        nearest_table[64][64][64] ; /* Conversión color -> paleta        */
 
-extern void         gr_make_trans_table() ;
-extern void         gr_fill_nearest_table() ;
 
-extern int          palette_loaded ;        /* ¿Se ha cargado ya la paleta inicial ? */
-extern int          palette_changed ;       /* Poner a 1 cuando se cambien colores   */
 extern int          fade_on ;               /* ¿Hay un fade activo?                  */
 extern int          fade_step ;             /* Si lo hay, posición (0=off)           */
 
-extern int          gr_read_pal           (file * file) ;
-extern void         gr_refresh_palette    () ;
+extern int          gr_read_pal_keep      (file * file, unsigned char * rgb) ;
+extern GRAPH *      bitmap_adapt16        (GRAPH * src, const unsigned char * rgb) ;
 extern void         gr_fade_init          (int pr, int pg, int pb, int speed) ;
 extern void         gr_fade_step          () ;
-extern void         gr_roll_palette       (int color0, int num, int inc) ;
-extern int          gr_find_nearest_color (int r, int g, int b) ;
-extern void         gr_set_rgb            (int c, int r, int g, int b) ;
 extern int          gr_rgb                (int r, int g, int b) ;
 extern void         gr_get_rgb            (int color, int *r, int *g, int *b) ;
-extern void         gr_set_colors         (int color, int num, Uint8 * pal) ;
-extern void         gr_get_colors         (int color, int num, Uint8 * pal) ;
 
 /* Blend ops */
 /* --------- */
@@ -197,9 +178,7 @@ extern int      gr_save_image    (GRAPH * gr, const char * filename, int format)
 extern int      gr_load_image    (const char * filename) ;
 extern int      gr_save_map      (GRAPH * gr, const char * filename) ;
 extern int      gr_save_fpg      (int libid, const char * filename) ;
-extern int      gr_load_pal      (const char * filename) ;
 
-extern int      gr_save_pal      (const char * filename) ;
 extern int		gr_save_png		 (GRAPH * gr, const char * filename) ;
 
 extern GRLIB  * grlib_get        (int libid) ;
@@ -346,6 +325,31 @@ extern void gr_mode7_draw   (int n) ;
 extern int  gr_mode7_active (int n) ;
 extern void gr_mode7_bbox   (int n, REGION * r) ;
 
+/* Modo 8 (g_mode8.c) */
+extern int  gr_m8_load   (const char * filename, int fpg) ;
+extern int  gr_m8_save   (const char * filename) ;
+extern void gr_mode8_start  (int camera, int n, int region) ;
+extern void gr_mode8_stop   (int n) ;
+extern void gr_mode8_draw   (int n) ;
+extern int  gr_mode8_active (int n) ;
+extern void gr_mode8_bbox   (int n, REGION * r) ;
+extern int  gr_m8_go_to_flag (INSTANCE * p, int number) ;
+extern int  gr_m8_set_sector_height (int s, int floor_h, int ceil_h) ;
+extern int  gr_m8_get_sector_height (int s, int * floor_h, int * ceil_h) ;
+extern int  gr_m8_set_point (int v, int x, int y) ;
+extern int  gr_m8_get_point (int v, int * x, int * y) ;
+extern int  gr_m8_set_sector_texture (int s, int tex_floor, int tex_ceil, int light) ;
+extern int  gr_m8_get_sector_texture (int s, int * tex_floor, int * tex_ceil, int * light) ;
+extern int  gr_m8_set_wall_texture (int w, int tex, int light) ;
+extern int  gr_m8_get_wall_texture (int w, int * tex, int * light) ;
+extern int  gr_m8_set_fog (int start, int end) ;
+extern int  gr_m8_set_env_color (int r, int g, int b) ;
+extern int  gr_m8_set_sky (int file, int graph, int reps, int n) ;
+extern int  gr_m8_sight (INSTANCE * from, INSTANCE * to) ;
+extern double gr_collision_radius (INSTANCE * p) ;
+extern int  gr_collision_3d (INSTANCE * proc1, INSTANCE * proc2) ;
+extern void gr_mode7_solids (void) ;
+
 /* Consola del sistema */
 /* ------------------- */
 
@@ -401,7 +405,6 @@ extern void     gr_convert16_ScreenTo565 (Uint16 * ptr, int len);
 extern void     gr_convert16_565ToScreen (Uint16 * ptr, int len);
 extern void     gr_fade16 (GRAPH * graph, int r, int g, int b);
 extern Uint16 * gr_alpha16 (int alpha);
-extern Uint8  * gr_alpha8  (int alpha);
 
 
 /* Rutinas del Mame's 2xScale algorithm */

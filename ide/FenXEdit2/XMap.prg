@@ -2,23 +2,13 @@
 
 // Carga de mapas externa
 process OpenMap(String dir,fil);
-private nmap,string filu;
+private nmap;
 begin
- Filu=Ucase(fil);
- Load_pal(dir+fil);Frame; // Paleta
- If (find(filu,".MAP")>=0)
-  nmap=load_map(dir+fil);
- Else
-  If (Find(filu,".PCX")>=0)
-   nmap=Load_pcx(dir+fil);
-  Else
-   If (find(filu,".PNG")>=0)
-    nmap=Load_png(dir+fil);
-   Else
-    nmap=Load_image(dir+fil);
-   End; //.png
-  End; //.pcx
- End; //.map
+ nmap=load_image(dir+fil);      // load_image reconoce MAP, PNG, PCX, BMP y TGA por su cabecera
+ if (nmap<=0)
+  MessageBox(AppName,"No se pudo cargar "+fil);frame;
+  return(0);
+ end;
  MapBox(fil,dir+fil,nmap);
 End; 
 
@@ -83,13 +73,13 @@ else
 end;
 // principal
 loop
- if (msg==2)
+ if (msg==MSG_CLICK)
   break;
  end
  hit=incuadre(mouse.x,mouse.y,x+ofsx,y+ofsy,an-13,al-28);
  if (ToWinSel==id and hit and !drag.DC)
   Drag.control=id;
-  Drag.msg=2;
+  Drag.msg=DRAG_MAP;
   Drag.tag=nmap;
   Drag.Hitag=0;
   Drag.hint=Text;
@@ -100,22 +90,10 @@ loop
  frame;
 end
 // descarga
-msg=256;
+msg=MSG_CLOSING;
 for (alpha=255;alpha>0;alpha-=16);frame;end;
 Unload_map(0,graph);
 Unload_map(0,dc);
 Unload_map(0,icon);
 Unload_map(0,nmap);
-end;
-
-Process DumpPal();
-Private Struct Paleta[256]
-         byte R,G,B;
-        end; 
-        i;
-begin
-get_colors(0,256,&paleta);
-for (i=0;i<256;i++)
- say("R:"+paleta[i].r+" G:"+paleta[i].g+" B:"+paleta[i].b+" <"+i);
-end;
 end;
